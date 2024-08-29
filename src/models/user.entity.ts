@@ -7,6 +7,8 @@ import {
 } from 'typeorm'
 import { BaseModel } from './base-model.entity'
 import { Appointment } from './appointment.entity'
+import { Car } from './renting/car.entity'
+import { Apartment } from './renting/apartment.entity'
 
 @Entity()
 export class User extends BaseModel {
@@ -29,6 +31,12 @@ export class User extends BaseModel {
   @Exclude()
   @Column({ nullable: true })
   lastForcedLogout: Date
+
+  @OneToMany(() => Apartment, (apartment) => apartment.owner, { nullable: true })
+  apartments: Apartment[];
+
+  @OneToMany(() => Car, (car) => car.owner, { nullable: true })
+  cars: Car[];
 
   @OneToMany(() => Appointment, appointment => appointment.user, { nullable: true })
   appointments: Appointment[];

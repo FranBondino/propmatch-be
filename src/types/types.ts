@@ -66,10 +66,16 @@ export enum UserType {
   user = 'user'
 }
 
-export type UserTypes = 'admin' | 'user'
+export enum UserType {
+  Admin = 'admin',
+  Owner = 'owner',
+  User = 'user',
+}
+
+export type UserTypes = keyof typeof UserType
 
 export enum GenderType {
-  male = 'male',
+  male = 'male', 
   female = 'female'
 }
 
