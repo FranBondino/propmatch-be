@@ -63,13 +63,8 @@ export enum EnumResource {
 
 export enum UserType {
   admin = 'admin',
-  user = 'user'
-}
-
-export enum UserType {
-  Admin = 'admin',
-  Owner = 'owner',
-  User = 'user',
+  owner = 'owner',
+  user = 'user',
 }
 
 export type UserTypes = keyof typeof UserType

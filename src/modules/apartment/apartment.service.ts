@@ -1,5 +1,5 @@
 import { FindOptionsWhere, Repository } from 'typeorm'
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common'
+import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common'
 import { GetAllPaginatedQB } from '../../helpers/pagination.helper'
 import { Apartment } from '../../models/renting/apartment.entity'
 import { Paginated, PaginateQueryRaw } from '../../types/types'
@@ -7,6 +7,7 @@ import { CreateApartmentDto, UpdateApartmentDto } from './apartment.dto'
 import { errorsCatalogs } from '../../catalogs/errors-catalogs'
 import { InjectRepository } from '@nestjs/typeorm'
 import { ApartmentRent } from '../../models/renting/apartment-rent.entity'
+import { User } from '../../models/user.entity'
 
 const { APARTMENT_NOT_FOUND, APARTMENT_HAS_RENTS } = errorsCatalogs
 
@@ -17,12 +18,34 @@ export class ApartmentService {
     private readonly repository: Repository<Apartment>,
     @InjectRepository(ApartmentRent)
     private readonly apartmentRentRepository: Repository<ApartmentRent>,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
   ) { }
 
-  public async create(dto: CreateApartmentDto): Promise<Apartment> {
-    const apartment = this.repository.create(dto)
+  public async create(dto: CreateApartmentDto, userId: string): Promise<Apartment> {
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+    })
+    if (!user) throw new NotFoundException("user was not found")
+    const apartment = this.repository.create({
+      ...dto,
+      owner: user,
+    })
 
     return this.repository.save(apartment)
+  }
+
+  public async getAllOwnerApartments(userId: string, query: PaginateQueryRaw): Promise<Paginated<Apartment>> {
+    const qb = this.repository.createQueryBuilder('apartment')
+      .leftJoinAndSelect('apartment.owner', 'owner')
+      .where('owner.id = :userId', { userId })
+
+    if (query.search) {
+      qb.andWhere(`LOWER(apartment.city) ILIKE :search`, { search: `%${query.search.toLowerCase()}%` })
+        .orWhere(`LOWER(apartment.fullAddress) ILIKE :search`, { search: `%${query.search.toLowerCase()}%` });
+    }
+
+    return GetAllPaginatedQB<Apartment>(qb, query)
   }
 
   public async findAll(): Promise<Apartment[]> {
@@ -49,14 +72,24 @@ export class ApartmentService {
     return obj
   }
 
-  public async update(dto: UpdateApartmentDto): Promise<void> {
-    const obj = await this.getById(dto.id, null)
-
-    await this.repository.save({
-      ...obj,
-      ...dto,
+  public async update(dto: UpdateApartmentDto, userId: string): Promise<void> {
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
     })
+    if (!user) throw new NotFoundException("user was not found")
+
+    const apartment = await this.repository.findOne({
+      where: { id: dto.id },
+      relations: ['owner']
+    })
+    if (!apartment) throw new NotFoundException('Apartment not found')
+    if (apartment.owner.id !== userId) throw new ForbiddenException('You are not allowed to update this apartment')
+
+    // Merge the updates and save the apartment
+    Object.assign(apartment, dto)
+    await this.repository.save(apartment)
   }
+
 
   public async deleteById(id: string): Promise<void> {
     const apartment = await this.repository.findOne({

@@ -9,7 +9,8 @@ import {
   Delete,
   UseGuards,
   UseInterceptors,
-  ClassSerializerInterceptor
+  ClassSerializerInterceptor,
+  Req,
 } from '@nestjs/common'
 import { IdRequired } from '../../helpers/helper.dto'
 import { getOptionsFromJSON } from '../../helpers/validation.helper'
@@ -22,11 +23,12 @@ import { CreateApartmentDto, UpdateApartmentDto } from './apartment.dto'
 import { ApartmentService } from './apartment.service'
 import { ResponseInterceptor } from '../../helpers/response.interceptor'
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger'
+import { Request } from 'express'
+import { User } from '../../models/user.entity'
 
-const { admin } = UserType
+const { admin, owner, user } = UserType
 
 @Controller('apartments')
-@AllowedUsers(admin)
 @UseGuards(JwtAuthGuard, AllowedUsersGuard)
 @UseInterceptors(ResponseInterceptor, ClassSerializerInterceptor)
 @ApiBearerAuth('admin')
@@ -37,8 +39,10 @@ export class ApartmentController {
   ) { }
 
   @Post()
-  public async create(@Body() dto: CreateApartmentDto): Promise<Apartment> {
-    return this.service.create(dto)
+  @AllowedUsers(admin, owner)
+  public async create(@Body() dto: CreateApartmentDto, @Req() req: Request): Promise<Apartment> {
+    const user = req.user as User
+    return this.service.create(dto, user.id)
   }
 
   @Get()
@@ -53,12 +57,25 @@ public async getAll(
   }
 }
 
+@Get('owner')
+@AllowedUsers(admin, owner)
+public async getAllOwnerApartments(
+  @Req() req: Request,
+  @Query() query: PaginateQueryRaw
+): Promise<Paginated<Apartment>> {
+  const user = req.user as User
+  return this.service.getAllOwnerApartments(user.id, query);
+}
+
   @Put()
-  public async update(@Body() dto: UpdateApartmentDto): Promise<void> {
-    return this.service.update(dto)
+  @AllowedUsers(admin, owner)
+  public async update(@Body() dto: UpdateApartmentDto, @Req() req: Request): Promise<void> {
+    const user = req.user as User
+    return this.service.update(dto, user.id)
   }
 
   @Delete('/:id')
+  @AllowedUsers(admin, owner)
   public async delete(@Param() { id }: IdRequired): Promise<void> {
     return this.service.deleteById(id)
   }
