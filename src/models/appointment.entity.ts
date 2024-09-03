@@ -25,4 +25,7 @@ export class Appointment extends BaseModel {
 
   @ManyToOne(() => User, {nullable: true})
   user: Relation<User>
+
+  @ManyToOne(() => User, {nullable: true})
+  owner: Relation<User>
 }

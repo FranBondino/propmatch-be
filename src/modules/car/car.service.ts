@@ -9,6 +9,7 @@ import { InjectRepository } from '@nestjs/typeorm'
 import { CarRent } from '../../models/renting/car-rent.entity'
 import { CarAuditService } from '../car-audit/car-audit.service'
 import { User } from '../../models/user.entity'
+import { Appointment } from '../../models/appointment.entity'
 
 const { CAR_NOT_FOUND, CAR_HAS_RENTS } = errorsCatalogs
 
@@ -21,11 +22,20 @@ export class CarService {
     private readonly carRentRepository: Repository<CarRent>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(Appointment)
+    private readonly appointmentRepository: Repository<Appointment>,
     private readonly carAuditService: CarAuditService,
   ) { }
 
   public async create(dto: CreateCarDto, userId: string): Promise<Car> {
-    const car = this.repository.create(dto)
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+    })
+    if (!user) throw new NotFoundException("user was not found")
+    const car = this.repository.create({
+      ...dto,
+    owner: user,
+    })
     const savedCar = await this.repository.save(car)
 
     await this.carAuditService.logAction(
@@ -50,6 +60,20 @@ export class CarService {
       qb.orWhere(`LOWER(car.make) ILIKE '%${query.search.toLocaleLowerCase()}%'`)
       qb.orWhere(`LOWER(car.licensePlate) ILIKE '%${query.search.toLocaleLowerCase()}%'`)
     }
+
+    return GetAllPaginatedQB<Car>(qb, query)
+  }
+
+  public async getAllOwnerCars(userId: string, query: PaginateQueryRaw): Promise<Paginated<Car>> {
+    const qb = this.repository.createQueryBuilder('car')
+      .leftJoinAndSelect('car.owner', 'owner')
+      .where('owner.id = :userId', { userId })
+
+      if (query.search) {
+        qb.andWhere(`LOWER(car.model) ILIKE '%${query.search.toLocaleLowerCase()}%'`)
+        qb.orWhere(`LOWER(car.make) ILIKE '%${query.search.toLocaleLowerCase()}%'`)
+        qb.orWhere(`LOWER(car.licensePlate) ILIKE '%${query.search.toLocaleLowerCase()}%'`)
+      }
 
     return GetAllPaginatedQB<Car>(qb, query)
   }
@@ -95,6 +119,12 @@ export class CarService {
     if (hasRents) {
       throw new ConflictException(CAR_HAS_RENTS)
     }
+
+    const hasAppointments = await this.appointmentRepository.findOne({
+      where: { car: { id: car.id } },
+    })
+
+    if (hasAppointments) throw new ConflictException("car has appointments")
   
     const result = await this.repository.softDelete(id)
   

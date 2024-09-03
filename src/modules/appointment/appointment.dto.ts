@@ -23,6 +23,10 @@ export class CreateAppointmentDto {
   @IsOptional()
   @IsUUID()
   userId?: string;
+
+  @IsOptional()
+  @IsUUID()
+  ownerId?: string;
 }  
 
 export class UpdateAppointmentStatusDto {

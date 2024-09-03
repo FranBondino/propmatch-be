@@ -26,7 +26,7 @@ import { ResponseInterceptor } from '../../helpers/response.interceptor'
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger'
 import { User } from '../../models/user.entity'
 
-const { admin } = UserType
+const { admin, owner } = UserType
 
 @Controller('cars')
 @AllowedUsers(admin)
@@ -43,6 +43,16 @@ export class CarController {
   public async getAll(@Query() query: PaginateQueryRaw): Promise<Paginated<Car>> {
     return this.service.getAll(query)
   }
+
+  @Get('owner')
+@AllowedUsers(admin, owner)
+public async getAllOwnerCars(
+  @Req() req: Request,
+  @Query() query: PaginateQueryRaw
+): Promise<Paginated<Car>> {
+  const user = req.user as User
+  return this.service.getAllOwnerCars(user.id, query);
+}
 
   @Post()
   public async create(@Body() dto: CreateCarDto, @Req() req: Request): Promise<Car> {

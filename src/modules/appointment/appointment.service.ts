@@ -45,6 +45,27 @@ export class AppointmentService {
     return GetAllPaginatedQB<Appointment>(qb, query);
   }
 
+  public async getAppointmentsByUser(userId: string, query: PaginateQueryRaw): Promise<Paginated<Appointment>> {
+    const qb = this.repository.createQueryBuilder('appointment')
+      .leftJoinAndSelect('appointment.user', 'user')
+      .leftJoinAndSelect('appointment.car', 'car')
+      .leftJoinAndSelect('appointment.apartment', 'apartment')
+      .where('appointment.user.id = :userId', { userId });
+  
+    return GetAllPaginatedQB<Appointment>(qb, query);
+  }
+
+  public async getAppointmentsByOwner(ownerId: string, query: PaginateQueryRaw): Promise<Paginated<Appointment>> {
+    const qb = this.repository.createQueryBuilder('appointment')
+      .leftJoinAndSelect('appointment.owner', 'owner')
+      .leftJoinAndSelect('appointment.car', 'car')
+      .leftJoinAndSelect('appointment.apartment', 'apartment')
+      .where('appointment.owner.id = :ownerId', { ownerId });
+  
+    return GetAllPaginatedQB<Appointment>(qb, query);
+  }
+  
+
   public async getAppointmentById(id: string, options: FindOptionsWhere<Appointment>): Promise<Appointment> {
     const appointment = await this.repository.findOne({
       where: { id },
@@ -57,6 +78,7 @@ export class AppointmentService {
     return appointment;
   }
   
+  /*
   public async createAppointment(dto: CreateAppointmentDto, userId: string): Promise<Appointment> {
     // Check if the user exists
     const user = await this.userRepository.findOne({
@@ -160,6 +182,8 @@ export class AppointmentService {
     return this.repository.save(obj);
   }
 
+  */
+
   public async updateAppointmentStatus(dto: UpdateAppointmentStatusDto): Promise<Appointment> {
     // Find the appointment to update
     const appointment = await this.repository.findOne({
@@ -186,4 +210,144 @@ export class AppointmentService {
 
     return updatedAppointment;
   }
+
+  public async createAppointment(dto: CreateAppointmentDto, userId: string): Promise<Appointment> {
+        const { user, owner, car, apartment } = await this.prepareAppointmentEntities(dto, userId);
+        
+        await this.validateAppointment(dto, user.id, car, apartment);
+
+        const appointment = this.createAppointmentEntity(dto, user, owner, car, apartment);
+        
+        await this.sendAppointmentNotifications(user, owner, car, apartment);
+
+        return this.repository.save(appointment);
+    }
+
+    private async prepareAppointmentEntities(dto: CreateAppointmentDto, userId: string): Promise<{ user: User, owner: User, car?: Car, apartment?: Apartment }> {
+        const user = await this.findUserById(userId);
+        const owner = await this.findOwnerById(dto.ownerId);
+        const { car: foundCar, apartment: foundApartment } = await this.findAssociatedEntities(dto, owner.id);
+
+        return { user, owner, car: foundCar, apartment: foundApartment };
+    }
+
+    private async validateAppointment(dto: CreateAppointmentDto, userId: string, car?: Car, apartment?: Apartment): Promise<void> {
+        await this.ensureNoOverlappingAppointments(dto, car, apartment);
+        await this.ensureWithinDailyLimit(userId);
+    }
+
+    private async findUserById(userId: string): Promise<User> {
+        const user = await this.userRepository.findOne({ where: { id: userId } });
+        if (!user) throw new NotFoundException("User not found");
+        return user;
+    }
+
+    private async findOwnerById(ownerId: string): Promise<User> {
+        const owner = await this.userRepository.findOne({ where: { id: ownerId} });
+        if (!owner) throw new NotFoundException("Owner not found");
+        return owner;
+    }
+
+    private async findAssociatedEntities(dto: CreateAppointmentDto, ownerId: string): Promise<{ car?: Car, apartment?: Apartment }> {
+        let car: Car | undefined;
+        let apartment: Apartment | undefined;
+
+        if (dto.apartmentId) {
+            apartment = await this.apartmentRepository.findOne({ where: { id: dto.apartmentId, owner: { id: ownerId } } });
+            if (!apartment) throw new NotFoundException('Apartment not found or does not belong to this owner');
+        }
+
+        if (dto.carId) {
+            car = await this.carRepository.findOne({ where: { id: dto.carId, owner: { id: ownerId } } });
+            if (!car) throw new NotFoundException('Car not found or does not belong to this owner');
+        }
+
+        if (!apartment && !car) throw new BadRequestException('Either apartmentId or carId must be provided');
+
+        return { car, apartment };
+    }
+
+    private async ensureNoOverlappingAppointments(dto: CreateAppointmentDto, car?: Car, apartment?: Apartment): Promise<void> {
+        const appointmentDate = new Date(dto.date);
+        const oneHourBefore = subHours(appointmentDate, 1);
+        const oneHourAfter = addHours(appointmentDate, 1);
+
+        const overlappingAppointments = await this.repository.find({
+            where: [
+                {
+                    car: car ? { id: car.id } : undefined,
+                    apartment: apartment ? { id: apartment.id } : undefined,
+                    date: Between(oneHourBefore, oneHourAfter),
+                },
+            ],
+        });
+
+        if (overlappingAppointments.length > 0) {
+            throw new BadRequestException('There is already an appointment scheduled for this time.');
+        }
+    }
+
+    private async ensureWithinDailyLimit(userId: string): Promise<void> {
+        const startOfToday = startOfDay(new Date());
+        const endOfToday = endOfDay(new Date());
+
+        const dailyAppointmentsCount = await this.repository.count({
+            where: {
+                user: { id: userId },
+                date: Between(startOfToday, endOfToday),
+            },
+        });
+
+        const DAILY_APPOINTMENT_LIMIT = 2;
+
+        if (dailyAppointmentsCount >= DAILY_APPOINTMENT_LIMIT) {
+            throw new BadRequestException('You have reached the daily appointment limit.');
+        }
+    }
+
+    private createAppointmentEntity(
+      dto: CreateAppointmentDto,
+      user: User,
+      owner: User,
+      car?: Car,
+      apartment?: Apartment
+    ): Appointment {
+        return this.repository.create({
+            ...dto,
+            user,
+            car,
+            apartment,
+            owner, // Associate the owner, who is a User
+            status: 'pending',
+        });
+    }
+
+    private async sendAppointmentNotifications(
+      user: User,
+      owner: User,
+      car?: Car,
+      apartment?: Apartment
+    ): Promise<void> {
+      try {
+        // Determine the type and details of the appointment
+        const appointmentType = car ? 'car' : 'apartment';
+        const appointmentDetails = car ? car.model : apartment?.fullAddress;
+    
+        // Email to the user who made the appointment
+        await this.emailNotificationService.sendEmail(
+          user.email, 
+          'Appointment Request Received',
+          `Your appointment request for the ${appointmentType} (${appointmentDetails}) has been received.`
+        );
+    
+        // Email to the owner
+        await this.emailNotificationService.sendEmail(
+          owner.email, 
+          'New Appointment Request',
+          `A new appointment request has been made for your ${appointmentType} (${appointmentDetails}).`
+        );
+      } catch (error) {
+        console.error('Error sending email notifications:', error);
+      }
+    }
 }

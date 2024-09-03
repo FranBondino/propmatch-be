@@ -40,4 +40,7 @@ export class User extends BaseModel {
 
   @OneToMany(() => Appointment, appointment => appointment.user, { nullable: true })
   appointments: Appointment[];
+
+  @OneToMany(() => Appointment, appointment => appointment.owner, { nullable: true })
+  ownedAppointments: Appointment[];
 }

@@ -5,12 +5,16 @@ import { ApartmentController } from './apartment.controller'
 import { SecurityModule } from '../security/security.module'
 import { Apartment } from '../../models/renting/apartment.entity'
 import { ApartmentRent } from '../../models/renting/apartment-rent.entity'
+import { User } from '../../models/user.entity'
+import { Appointment } from '../../models/appointment.entity'
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([
       Apartment,
-      ApartmentRent
+      ApartmentRent,
+      User,
+      Appointment
     ]),
     SecurityModule,
   ],

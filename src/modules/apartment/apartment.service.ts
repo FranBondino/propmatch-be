@@ -8,6 +8,7 @@ import { errorsCatalogs } from '../../catalogs/errors-catalogs'
 import { InjectRepository } from '@nestjs/typeorm'
 import { ApartmentRent } from '../../models/renting/apartment-rent.entity'
 import { User } from '../../models/user.entity'
+import { Appointment } from '../../models/appointment.entity'
 
 const { APARTMENT_NOT_FOUND, APARTMENT_HAS_RENTS } = errorsCatalogs
 
@@ -20,6 +21,8 @@ export class ApartmentService {
     private readonly apartmentRentRepository: Repository<ApartmentRent>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(Appointment)
+    private readonly appointmentRepository: Repository<Appointment>,
   ) { }
 
   public async create(dto: CreateApartmentDto, userId: string): Promise<Apartment> {
@@ -107,6 +110,12 @@ export class ApartmentService {
     if (hasRents) {
       throw new ConflictException(APARTMENT_HAS_RENTS)
     }
+
+    const hasAppointments = await this.appointmentRepository.findOne({
+      where: { apartment: { id: apartment.id } },
+    })
+
+    if (hasAppointments) throw new ConflictException("apartment has appointments")
   
     const result = await this.repository.softDelete(id)
   

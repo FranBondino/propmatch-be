@@ -53,4 +53,14 @@ export class AppointmentController {
     const options = getOptionsFromJSON(queryOptions)
     return this.service.getAppointmentById(id, options)
   }
+
+  @Get('/user/:userId')
+  public async getByUser(@Param('userId') userId: string, @Query() query: PaginateQueryRaw): Promise<Paginated<Appointment>> {
+    return this.service.getAppointmentsByUser(userId, query);
+  }
+
+  @Get('/owner/:ownerId')
+  public async getByOwner(@Param('ownerId') ownerId: string, @Query() query: PaginateQueryRaw): Promise<Paginated<Appointment>> {
+    return this.service.getAppointmentsByOwner(ownerId, query);
+  }
 }
