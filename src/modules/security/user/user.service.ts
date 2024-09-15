@@ -67,6 +67,25 @@ export class UserService {
     return obj.save()
   }
 
+  public async signup(dto: CreateUserDto): Promise<User> {
+    // Check if the email is already taken
+    await this.isEmailFree(dto.email);
+  
+    // Hash the user's password
+    dto.password = await this.userUtils.hashPassword(dto.password);
+  
+    // Create the user entity
+    const newUser = this.repository.create(dto);
+  
+    // Save the new user to the database
+    const savedUser = await this.repository.save(newUser);
+  
+    // Remove sensitive information before returning the user
+    delete savedUser.password;
+  
+    return savedUser
+  }
+
   public async update(dto: UpdateUserDto): Promise<User> {
     await this.getById(dto.id, null)
     if (dto.password) {

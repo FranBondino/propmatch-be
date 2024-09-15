@@ -15,8 +15,8 @@ import {
 } from '../../../helpers/password.helper'
 
 
-const { admin, user } = UserType
-const userTypes = [admin, user]
+const { admin, user, owner } = UserType
+const userTypes = [admin, user, owner]
 export class CreateUserDto {
   @Length(2, 30)
   fullName: string

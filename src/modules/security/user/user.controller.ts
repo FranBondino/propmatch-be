@@ -12,7 +12,6 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common'
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger'
 import { Request } from 'express'
 import { SetPaginatedType } from '../../../helpers/response.decorator'
 import { IdRequired } from '../../../helpers/helper.dto'
@@ -36,11 +35,7 @@ import {
 import { UserService } from './user.service'
 
 @Controller('users')
-@AllowedUsers(UserType.admin)
-@UseGuards(JwtAuthGuard, AllowedUsersGuard)
 @UseInterceptors(ResponseInterceptor, ClassSerializerInterceptor)
-@ApiBearerAuth('admin')
-@ApiTags('admin/user')
 export class UserController {
   constructor(
     private readonly service: UserService,
@@ -48,12 +43,20 @@ export class UserController {
   ) { }
 
   @Post()
+  @AllowedUsers(UserType.admin)
   public async create(@Body() dto: CreateUserDto, @Req() req: Request): Promise<UserResponseDto> {
     await this.service.isEmailFree(dto.email)
 
     const obj = await this.service.create(dto)
     await this.logService.create(logCreateUser(req.user, obj.id))
     return obj
+  }
+
+  @Post('/signup')
+  @AllowedUsers(UserType.user, UserType.owner)
+  public async signup(@Body() dto: CreateUserDto): Promise<UserResponseDto> {
+    const user = await this.service.signup(dto)
+    return user
   }
 
   @Put()

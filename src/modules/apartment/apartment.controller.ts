@@ -67,6 +67,14 @@ public async getAllOwnerApartments(
   return this.service.getAllOwnerApartments(user.id, query);
 }
 
+@Get('available')
+  @AllowedUsers(admin, user, owner)
+  public async getAvailableApartments(
+    @Query() query: PaginateQueryRaw
+  ): Promise<Paginated<Apartment>> {
+    return this.service.getAvailableApartments(query); // Fetch available apartments
+  }
+
   @Put()
   @AllowedUsers(admin, owner)
   public async update(@Body() dto: UpdateApartmentDto, @Req() req: Request): Promise<void> {

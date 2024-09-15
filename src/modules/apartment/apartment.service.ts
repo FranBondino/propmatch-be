@@ -5,6 +5,7 @@ import { Apartment } from '../../models/renting/apartment.entity'
 import { Paginated, PaginateQueryRaw } from '../../types/types'
 import { CreateApartmentDto, UpdateApartmentDto } from './apartment.dto'
 import { errorsCatalogs } from '../../catalogs/errors-catalogs'
+import { format } from 'date-fns'
 import { InjectRepository } from '@nestjs/typeorm'
 import { ApartmentRent } from '../../models/renting/apartment-rent.entity'
 import { User } from '../../models/user.entity'
@@ -64,6 +65,26 @@ export class ApartmentService {
     }
 
     return GetAllPaginatedQB<Apartment>(qb, query)
+  }
+
+  public async getAvailableApartments(query: PaginateQueryRaw): Promise<Paginated<Apartment>> {
+    const currentDate = format(new Date(), 'yyyy-MM-dd'); // Format the current date (YYYY-MM-DD)
+  
+    const qb = this.repository.createQueryBuilder('apartment')
+      .leftJoin('apartment.apartmentRents', 'apartmentRent')
+      .where(`
+        apartmentRent.id IS NULL OR 
+        apartmentRent.startDate > :currentDate OR 
+        apartmentRent.endDate < :currentDate
+      `, { currentDate }) // Exclude apartments with ongoing rents
+  
+    if (query.search) {
+      qb.andWhere(`LOWER(apartment.city) ILIKE :search`, { search: `%${query.search.toLowerCase()}%` })
+        .orWhere(`LOWER(apartment.fullAddress) ILIKE :search`, { search: `%${query.search.toLowerCase()}%` });
+    }
+  
+    // Use the same pagination helper for returning paginated results
+    return GetAllPaginatedQB<Apartment>(qb, query);
   }
 
   public async getById(id: string, options: FindOptionsWhere<Apartment>): Promise<Apartment> {
