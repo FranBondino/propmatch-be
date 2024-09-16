@@ -3,6 +3,7 @@ import {
   ClassSerializerInterceptor,
   Controller,
   Delete,
+  ForbiddenException,
   Get,
   Param,
   Post,
@@ -33,6 +34,7 @@ import {
   UserResponseDto
 } from './user.dto'
 import { UserService } from './user.service'
+import { User } from '../../../models/user.entity'
 
 @Controller('users')
 @UseInterceptors(ResponseInterceptor, ClassSerializerInterceptor)
@@ -78,6 +80,18 @@ export class UserController {
   public async getAll(@Query() query: PaginateQueryRaw): Promise<Paginated<UserResponseDto>> {
     return this.service.getAll(query)
   }
+
+  @Get('find-roommates')
+@UseGuards(JwtAuthGuard)
+public async getPotentialRoommates(@Req() req: Request): Promise<UserResponseDto[]> {
+  const currentUser: User = req.user as User;
+
+  if (currentUser.type !== UserType.user) {
+    throw new ForbiddenException('This functionality is only available to users.');
+  }
+
+  return this.service.findPotentialRoommates(currentUser);
+}
 
   @Delete('/:id')
   public async delete(@Param() { id }: IdRequired, @Req() req: any): Promise<void> {

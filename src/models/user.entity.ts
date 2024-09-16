@@ -43,4 +43,17 @@ export class User extends BaseModel {
 
   @OneToMany(() => Appointment, appointment => appointment.owner, { nullable: true })
   ownedAppointments: Appointment[];
+
+  @Column('json', { nullable: true })
+  preferences: {
+    preferredCity?: string;
+    maxBudget?: number;
+    smoking?: boolean;
+    pets?: boolean;
+    noiseTolerance?: number;
+    preferredLanguage?: string;
+    gender?: string;
+    genderPreference?: string;
+  };
 }
+

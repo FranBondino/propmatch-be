@@ -60,6 +60,31 @@ export class UserService {
     return GetAllPaginatedQB(qb, query)
   }
 
+  public async findPotentialRoommates(currentUser: User): Promise<User[]> {
+    const {
+      preferredCity,
+      maxBudget,
+      smoking,
+      pets,
+      noiseTolerance,
+      preferredLanguage,
+      genderPreference,
+      gender
+    } = currentUser.preferences || {};
+  
+    return this.repository.createQueryBuilder('user')
+      .where('user.type = :type', { type: 'user' })
+      .andWhere('user.preferences ->> \'preferredCity\' = :city', { city: preferredCity })
+      .andWhere('user.preferences ->> \'maxBudget\'::float >= :budget', { budget: maxBudget })
+      .andWhere('user.preferences ->> \'smoking\'::boolean = :smoking', { smoking })
+      .andWhere('user.preferences ->> \'pets\'::boolean = :pets', { pets })
+      .andWhere('user.preferences ->> \'noiseTolerance\'::float >= :noiseTolerance', { noiseTolerance })
+      .andWhere('user.preferences ->> \'preferredLanguage\' = :language', { language: preferredLanguage })
+      .andWhere('user.preferences ->> \'gender\' = :gender', { gender: genderPreference })
+      .andWhere('user.id != :id', { id: currentUser.id }) // Exclude current user
+      .getMany();
+  }
+
   public async create(dto: CreateUserDto): Promise<User> {
     dto.password = await this.userUtils.hashPassword(dto.password)
     const obj = this.repository.create(dto)

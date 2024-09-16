@@ -1,8 +1,11 @@
 import {
+  IsBoolean,
   IsEmail,
   IsIn,
   IsNotEmpty,
+  IsNumber,
   IsOptional,
+  IsString,
   IsUUID,
   Length,
   Matches
@@ -56,6 +59,40 @@ export class UpdateUserDto {
   @Matches(atLeastOneNumber)
   @Matches(validCharacters)
   password?: string
+}
+
+export class UserPreferencesDto {
+  @IsOptional()
+  @IsString()
+  preferredCity?: string;
+
+  @IsOptional()
+  @IsNumber()
+  maxBudget?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  smoking?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  pets?: boolean;
+
+  @IsOptional()
+  @IsNumber()
+  noiseTolerance?: number;
+
+  @IsOptional()
+  @IsString()
+  preferredLanguage?: string;
+
+  @IsOptional()
+  @IsString()
+  gender?: string;
+
+  @IsOptional()
+  @IsString()
+  genderPreference?: string;
 }
 
 export class UpdateMyProfileDto {
