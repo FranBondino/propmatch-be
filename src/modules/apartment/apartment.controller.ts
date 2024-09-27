@@ -11,6 +11,7 @@ import {
   UseInterceptors,
   ClassSerializerInterceptor,
   Req,
+  NotFoundException,
 } from '@nestjs/common'
 import { IdRequired } from '../../helpers/helper.dto'
 import { getOptionsFromJSON } from '../../helpers/validation.helper'
@@ -56,6 +57,17 @@ public async getAll(
     return this.service.getAll(query); // Fetch all apartments
   }
 }
+
+@Get(':id/owner')
+  public async getOwnerByApartment(@Param('id') apartmentId: string): Promise<User> {
+    const owner = await this.service.getOwnerByApartment(apartmentId);
+
+    if (!owner) {
+      throw new NotFoundException(`Owner for apartment with ID ${apartmentId} not found`);
+    }
+
+    return owner;
+  }
 
 @Get('owner')
 @AllowedUsers(admin, owner)

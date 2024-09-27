@@ -71,11 +71,11 @@ export class ApartmentService {
     const currentDate = format(new Date(), 'yyyy-MM-dd'); // Format the current date (YYYY-MM-DD)
   
     const qb = this.repository.createQueryBuilder('apartment')
-      .leftJoin('apartment.apartmentRents', 'apartmentRent')
+      .leftJoin(ApartmentRent, 'apartmentRent', 'apartment.id = apartmentRent.apartment.id')
       .where(`
         apartmentRent.id IS NULL OR 
-        apartmentRent.startDate > :currentDate OR 
-        apartmentRent.endDate < :currentDate
+        apartmentRent.startedAt > :currentDate OR 
+        apartmentRent.endedAt < :currentDate
       `, { currentDate }) // Exclude apartments with ongoing rents
   
     if (query.search) {
@@ -86,6 +86,7 @@ export class ApartmentService {
     // Use the same pagination helper for returning paginated results
     return GetAllPaginatedQB<Apartment>(qb, query);
   }
+
 
   public async getById(id: string, options: FindOptionsWhere<Apartment>): Promise<Apartment> {
     const obj = await this.repository.findOne(({
