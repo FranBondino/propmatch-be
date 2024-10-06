@@ -18,17 +18,16 @@ import { HttpExceptionFilter } from './filters/http.filter'
 import { TrimPipe } from './helpers/pipes/trim.pipe'
 import { SwaggerModule } from '@nestjs/swagger'
 import { swaggerConfig } from './config/swagger'
-import { logger } from './config/logger'
 import metadata from './metadata'
 
 async function bootstrap() {
   checkEnvironmentVars()
   const app = await NestFactory.create(AppModule, {
-    logger: ['debug'],
+    logger: ['debug', 'log', 'error', 'verbose', 'warn'],
   })
 
   if (isSwaggerEnabled) {
-   await SwaggerModule.loadPluginMetadata(metadata)
+    await SwaggerModule.loadPluginMetadata(metadata)
     const document = SwaggerModule.createDocument(app, swaggerConfig)
 
     SwaggerModule.setup('/docs', app, document, {

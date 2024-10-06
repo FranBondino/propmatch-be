@@ -56,6 +56,24 @@ export class ApartmentService {
     return this.repository.find()
   }
 
+  public async getOwnerByApartmentId(apartmentId: string): Promise<User> {
+    const apartment = await this.repository.findOne({
+      where: { id: apartmentId },
+      relations: ['owner'],
+    });
+
+    if (!apartment) {
+      throw new NotFoundException('Apartment not found');
+    }
+
+    if (!apartment.owner) {
+      throw new NotFoundException('Owner not found for this apartment');
+    }
+
+    return apartment.owner;
+  }
+
+
   public async getAll(query: PaginateQueryRaw): Promise<Paginated<Apartment>> {
     const qb = this.repository.createQueryBuilder('apartment')
 
@@ -69,7 +87,7 @@ export class ApartmentService {
 
   public async getAvailableApartments(query: PaginateQueryRaw): Promise<Paginated<Apartment>> {
     const currentDate = format(new Date(), 'yyyy-MM-dd'); // Format the current date (YYYY-MM-DD)
-  
+
     const qb = this.repository.createQueryBuilder('apartment')
       .leftJoin(ApartmentRent, 'apartmentRent', 'apartment.id = apartmentRent.apartment.id')
       .where(`
@@ -77,12 +95,12 @@ export class ApartmentService {
         apartmentRent.startedAt > :currentDate OR 
         apartmentRent.endedAt < :currentDate
       `, { currentDate }) // Exclude apartments with ongoing rents
-  
+
     if (query.search) {
       qb.andWhere(`LOWER(apartment.city) ILIKE :search`, { search: `%${query.search.toLowerCase()}%` })
         .orWhere(`LOWER(apartment.fullAddress) ILIKE :search`, { search: `%${query.search.toLowerCase()}%` });
     }
-  
+
     // Use the same pagination helper for returning paginated results
     return GetAllPaginatedQB<Apartment>(qb, query);
   }
@@ -120,15 +138,15 @@ export class ApartmentService {
     const apartment = await this.repository.findOne({
       where: { id },
     })
-  
+
     if (!apartment) {
       throw new NotFoundException(APARTMENT_NOT_FOUND)
     }
-  
+
     const hasRents = await this.apartmentRentRepository.findOne({
       where: { apartment: { id: apartment.id } },
     })
-  
+
     if (hasRents) {
       throw new ConflictException(APARTMENT_HAS_RENTS)
     }
@@ -138,14 +156,14 @@ export class ApartmentService {
     })
 
     if (hasAppointments) throw new ConflictException("apartment has appointments")
-  
+
     const result = await this.repository.softDelete(id)
-  
+
     if (result.affected === 0) {
       throw new NotFoundException(APARTMENT_NOT_FOUND)
     }
   }
-  
+
 }
 
 
