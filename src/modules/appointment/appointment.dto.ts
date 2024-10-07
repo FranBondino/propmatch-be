@@ -10,7 +10,10 @@ import {
 
 export class CreateAppointmentDto {
   @IsDateString()
-  date: Date;
+  startTime: Date;
+
+  @IsDateString()
+  endTime: Date;
 
   @IsOptional()
   @IsUUID()

@@ -11,8 +11,11 @@ import { Car } from './renting/car.entity'
 
 @Entity()
 export class Appointment extends BaseModel {
-  @Column()
-  date: Date
+  @Column({ type: 'timestamp' })
+  startTime: Date
+
+  @Column({ type: 'timestamp' })
+  endTime: Date
 
   @Column()
   status: 'pending' | 'accepted' | 'rejected'
