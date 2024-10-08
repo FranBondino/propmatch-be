@@ -48,6 +48,11 @@ export class AppointmentController {
     return this.service.getAllAppointments(query);
   }
 
+  @Get('/available-times/:ownerId')
+  public async getAvailableAppointmentTimes(@Param('ownerId') ownerId: string): Promise<string[]> {
+    return this.service.getAvailableAppointmentTimes(ownerId)
+  }
+
   @Get('/:id')
   public async get(@Param() { id }: IdRequired, @Query() queryOptions: any): Promise<Appointment> {
     const options = getOptionsFromJSON(queryOptions)

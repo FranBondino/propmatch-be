@@ -11,10 +11,10 @@ import { Car } from './renting/car.entity'
 
 @Entity()
 export class Appointment extends BaseModel {
-  @Column({ type: 'timestamp' })
+  @Column({ type: 'timestamp', nullable: true })
   startTime: Date
 
-  @Column({ type: 'timestamp' })
+  @Column({ type: 'timestamp', nullable: true })
   endTime: Date
 
   @Column()

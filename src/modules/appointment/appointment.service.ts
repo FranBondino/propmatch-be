@@ -159,7 +159,7 @@ export class AppointmentService {
   public async createAppointment(dto: CreateAppointmentDto, userId: string): Promise<Appointment> {
     const { user, owner, car, apartment } = await this.prepareAppointmentEntities(dto, userId);
     
-    await this.validateAppointment(dto, user.id, owner.id, car, apartment);
+    await this.validateAppointment(dto, owner.id);
 
     const appointment = this.createAppointmentEntity(dto, user, owner, car, apartment);
     
@@ -176,7 +176,7 @@ export class AppointmentService {
     return { user, owner, car: foundCar, apartment: foundApartment };
   }
 
-  private async validateAppointment(dto: CreateAppointmentDto, userId: string, ownerId: string, car?: Car, apartment?: Apartment): Promise<void> {
+  private async validateAppointment(dto: CreateAppointmentDto, ownerId: string): Promise<void> {
     await this.ensureNoOverlappingAppointments(dto, ownerId);
   }
 
