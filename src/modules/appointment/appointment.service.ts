@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Between, Brackets, FindOptionsWhere, Repository } from 'typeorm';
-import { isWithinInterval, subMinutes, addMinutes, endOfDay, startOfDay } from 'date-fns';
+import { isWithinInterval, subMinutes, addMinutes, endOfDay, startOfDay, addDays } from 'date-fns';
 import { User } from '../../models/user.entity';
 import { Appointment } from '../../models/appointment.entity';
 import { Car } from '../../models/renting/car.entity';
@@ -24,14 +24,14 @@ export class AppointmentService {
     @InjectRepository(Apartment)
     private readonly apartmentRepository: Repository<Apartment>,
     private readonly emailNotificationService: EmailNotificationService,
-  ) {}
+  ) { }
 
   public async getAllAppointments(query: PaginateQueryRaw): Promise<Paginated<Appointment>> {
     const qb = this.repository.createQueryBuilder('appointment')
       .leftJoinAndSelect('appointment.user', 'user')
       .leftJoinAndSelect('appointment.car', 'car')
       .leftJoinAndSelect('appointment.apartment', 'apartment');
-  
+
     if (query.search) {
       qb.andWhere(
         new Brackets(qb => {
@@ -42,7 +42,7 @@ export class AppointmentService {
         })
       );
     }
-  
+
     return GetAllPaginatedQB<Appointment>(qb, query);
   }
 
@@ -52,7 +52,7 @@ export class AppointmentService {
       .leftJoinAndSelect('appointment.car', 'car')
       .leftJoinAndSelect('appointment.apartment', 'apartment')
       .where('appointment.user.id = :userId', { userId });
-  
+
     return GetAllPaginatedQB<Appointment>(qb, query);
   }
 
@@ -62,10 +62,10 @@ export class AppointmentService {
       .leftJoinAndSelect('appointment.car', 'car')
       .leftJoinAndSelect('appointment.apartment', 'apartment')
       .where('appointment.owner.id = :ownerId', { ownerId });
-  
+
     return GetAllPaginatedQB<Appointment>(qb, query);
   }
-  
+
 
   public async getAppointmentById(id: string, options: FindOptionsWhere<Appointment>): Promise<Appointment> {
     const appointment = await this.repository.findOne({
@@ -83,7 +83,7 @@ export class AppointmentService {
   public async updateAppointmentStatus(dto: UpdateAppointmentStatusDto): Promise<Appointment> {
     // Find the appointment to update
     const appointment = await this.repository.findOne({
-      where: { id:dto.id  },
+      where: { id: dto.id },
     });
     if (!appointment) {
       throw new NotFoundException('Appointment not found');
@@ -112,31 +112,31 @@ export class AppointmentService {
     const endTime = 20; // 8 PM
     const appointmentDuration = 30; // Appointment duration in minutes
     const bufferTime = 15; // Buffer time in minutes
-  
-    // Get existing appointments for the owner from Monday to Friday
+
+    // Get the date range from today until two weeks later
     const today = new Date();
-    const startOfWeek = startOfDay(today);
-    const endOfWeek = endOfDay(today);
-  
+    const twoWeeksLater = addDays(today, 14);
+
+    // Get existing appointments for the owner from today until two weeks later
     const existingAppointments = await this.repository.find({
       where: {
         owner: { id: ownerId },
-        startTime: Between(startOfWeek, endOfWeek),
+        startTime: Between(today, twoWeeksLater),
       },
     });
-  
+
     const availableTimes: string[] = [];
-  
-    // Check available slots for each day from Monday to Friday
-    for (let dayOffset = 0; dayOffset < 5; dayOffset++) {
-      const day = new Date(startOfWeek);
-      day.setDate(day.getDate() + dayOffset);
-      const dateString = day.toISOString().split('T')[0]; // Format date for output
-  
+
+    // Loop through each day from today until two weeks from now
+    for (let dayOffset = 0; dayOffset < 14; dayOffset++) {
+      const day = addDays(today, dayOffset);
+      const dateString = day.toISOString().split('T')[0]; // ISO 8601 date string
+
+      // Loop through each hour slot between startTime and endTime
       for (let hour = startTime; hour < endTime; hour++) {
-        const startSlot = new Date(dateString + `T${hour.toString().padStart(2, '0')}:00`);
+        const startSlot = new Date(dateString + `T${hour.toString().padStart(2, '0')}:00:00.000Z`);
         const endSlot = addMinutes(startSlot, appointmentDuration);
-        
+
         // Check if there's a conflict with existing appointments
         const isAvailable = !existingAppointments.some(appointment => {
           return isWithinInterval(appointment.startTime, {
@@ -144,25 +144,25 @@ export class AppointmentService {
             end: addMinutes(endSlot, bufferTime),
           });
         });
-  
+
         if (isAvailable) {
-          // Format the available time slot to a more readable format
-          const formattedTime = format(startSlot, "EEEE, MMMM d, yyyy, h:mm a");
-          availableTimes.push(formattedTime); // Add the formatted time slot
+          availableTimes.push(startSlot.toISOString()); // Return in ISO 8601 format
         }
       }
     }
-  
+
     return availableTimes;
   }
 
+
+
   public async createAppointment(dto: CreateAppointmentDto, userId: string): Promise<Appointment> {
     const { user, owner, car, apartment } = await this.prepareAppointmentEntities(dto, userId);
-    
+
     await this.validateAppointment(dto, owner.id);
 
     const appointment = this.createAppointmentEntity(dto, user, owner, car, apartment);
-    
+
     await this.sendAppointmentNotifications(user, owner, car, apartment);
 
     return this.repository.save(appointment);
@@ -227,7 +227,7 @@ export class AppointmentService {
       throw new BadRequestException('Appointment time overlaps with an existing appointment');
     }
   }
-  
+
   private createAppointmentEntity(
     dto: CreateAppointmentDto,
     user: User,
@@ -245,34 +245,34 @@ export class AppointmentService {
     });
   }
 
-  
 
-    private async sendAppointmentNotifications(
-      user: User,
-      owner: User,
-      car?: Car,
-      apartment?: Apartment
-    ): Promise<void> {
-      try {
-        // Determine the type and details of the appointment
-        const appointmentType = car ? 'car' : 'apartment';
-        const appointmentDetails = car ? car.model : apartment?.fullAddress;
-    
-        // Email to the user who made the appointment
-        await this.emailNotificationService.sendEmail(
-          user.email, 
-          'Appointment Request Received',
-          `Your appointment request for the ${appointmentType} (${appointmentDetails}) has been received.`
-        );
-    
-        // Email to the owner
-        await this.emailNotificationService.sendEmail(
-          owner.email, 
-          'New Appointment Request',
-          `A new appointment request has been made for your ${appointmentType} (${appointmentDetails}).`
-        );
-      } catch (error) {
-        console.error('Error sending email notifications:', error);
-      }
+
+  private async sendAppointmentNotifications(
+    user: User,
+    owner: User,
+    car?: Car,
+    apartment?: Apartment
+  ): Promise<void> {
+    try {
+      // Determine the type and details of the appointment
+      const appointmentType = car ? 'car' : 'apartment';
+      const appointmentDetails = car ? car.model : apartment?.fullAddress;
+
+      // Email to the user who made the appointment
+      await this.emailNotificationService.sendEmail(
+        user.email,
+        'Appointment Request Received',
+        `Your appointment request for the ${appointmentType} (${appointmentDetails}) has been received.`
+      );
+
+      // Email to the owner
+      await this.emailNotificationService.sendEmail(
+        owner.email,
+        'New Appointment Request',
+        `A new appointment request has been made for your ${appointmentType} (${appointmentDetails}).`
+      );
+    } catch (error) {
+      console.error('Error sending email notifications:', error);
     }
+  }
 }
