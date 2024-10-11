@@ -27,7 +27,7 @@ import { User } from '../../models/user.entity';
 @UseGuards(JwtAuthGuard, AllowedUsersGuard)
 @UseInterceptors(ResponseInterceptor, ClassSerializerInterceptor)
 export class AppointmentController {
-  constructor( 
+  constructor(
     private readonly service: AppointmentService,
   ) { }
 
@@ -41,6 +41,14 @@ export class AppointmentController {
   public async updateAppointmentStatus(@Body() dto: UpdateAppointmentStatusDto): Promise<Appointment> {
     return this.service.updateAppointmentStatus(dto);
   }
+
+  @Put('/cancel/:id')
+  public async cancelAppointment(@Param('id') id: string, @Req() req: Request): Promise<void> {
+    const user = req.user as User;
+    return this.service.cancelAppointment(id, user.id); // Passing appointmentId and userId
+  }
+
+
 
   @Get()
   public async getAll(@Query() query: PaginateQueryRaw): Promise<Paginated<Appointment>> {

@@ -12,9 +12,6 @@ export class CreateAppointmentDto {
   @IsDateString()
   startTime: Date;
 
-  @IsDateString()
-  endTime: Date;
-
   @IsOptional()
   @IsUUID()
   apartmentId?: string;
@@ -30,7 +27,7 @@ export class CreateAppointmentDto {
   @IsOptional()
   @IsUUID()
   ownerId?: string;
-}  
+}
 
 export class UpdateAppointmentStatusDto {
   @IsNotEmpty()
@@ -38,6 +35,6 @@ export class UpdateAppointmentStatusDto {
   id: string;
 
   @IsNotEmpty()
-  @IsEnum(['accepted', 'rejected'])
-  status: 'accepted' | 'rejected';
+  @IsEnum(['accepted', 'cancelled'])
+  status: 'accepted' | 'cancelled';
 }

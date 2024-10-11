@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Between, Brackets, FindOptionsWhere, Repository } from 'typeorm';
-import { isWithinInterval, subMinutes, addMinutes, endOfDay, startOfDay, addDays } from 'date-fns';
+import { Between, Brackets, FindOptionsWhere, In, Repository } from 'typeorm';
+import { isWithinInterval, subMinutes, addMinutes, endOfDay, startOfDay, addDays, differenceInDays } from 'date-fns';
 import { User } from '../../models/user.entity';
 import { Appointment } from '../../models/appointment.entity';
 import { Car } from '../../models/renting/car.entity';
@@ -113,21 +113,22 @@ export class AppointmentService {
     const appointmentDuration = 30; // Appointment duration in minutes
     const bufferTime = 15; // Buffer time in minutes
 
-    // Get the date range from today until two weeks later
-    const today = new Date();
+    // Get the date range starting from tomorrow until two weeks later
+    const today = addDays(new Date(), 1);
     const twoWeeksLater = addDays(today, 14);
 
-    // Get existing appointments for the owner from today until two weeks later
+    // Get existing appointments for the owner from tomorrow until two weeks later
     const existingAppointments = await this.repository.find({
       where: {
         owner: { id: ownerId },
         startTime: Between(today, twoWeeksLater),
+        status: In(['pending', 'accepted']) //filter to count only confirmed or pending appointments
       },
     });
 
     const availableTimes: string[] = [];
 
-    // Loop through each day from today until two weeks from now
+    // Loop through each day from tomorrow until two weeks from now
     for (let dayOffset = 0; dayOffset < 14; dayOffset++) {
       const day = addDays(today, dayOffset);
       const dateString = day.toISOString().split('T')[0]; // ISO 8601 date string
@@ -213,9 +214,11 @@ export class AppointmentService {
 
   private async ensureNoOverlappingAppointments(dto: CreateAppointmentDto, ownerId: string): Promise<void> {
     const startTime = new Date(dto.startTime);
-    const endTime = new Date(dto.endTime); // Updated to use endTime
+    const appointmentDuration = 30; // Appointment duration in minutes
+    const endTime = addMinutes(startTime, appointmentDuration); // Automatically set endTime to 30 minutes after startTime
     const bufferTime = 15; // 15 minutes buffer
 
+    // Find overlapping appointments with buffer time applied
     const overlappingAppointments = await this.repository.find({
       where: {
         owner: { id: ownerId },
@@ -223,6 +226,7 @@ export class AppointmentService {
       },
     });
 
+    // Throw error if there are overlapping appointments
     if (overlappingAppointments.length) {
       throw new BadRequestException('Appointment time overlaps with an existing appointment');
     }
@@ -275,4 +279,60 @@ export class AppointmentService {
       console.error('Error sending email notifications:', error);
     }
   }
+
+  public async cancelAppointment(appointmentId: string, userId: string): Promise<void> {
+    const appointment = await this.repository.findOne({
+      where: { id: appointmentId, user: { id: userId } },
+    });
+
+    if (!appointment) {
+      throw new NotFoundException('Appointment not found');
+    }
+
+    const currentDate = new Date();
+    const appointmentStartTime = new Date(appointment.startTime);
+
+    // Check if the appointment is at least 2 days away
+    const daysUntilAppointment = differenceInDays(appointmentStartTime, currentDate);
+    if (daysUntilAppointment < 2) {
+      throw new BadRequestException('You can only cancel appointments at least two days before the scheduled time');
+    }
+
+    // Cancel the appointment
+    appointment.status = 'cancelled';
+    await this.repository.save(appointment);
+
+    // Notify the user and owner about the cancellation
+    await this.sendCancellationNotifications(appointment.user, appointment.owner, appointment.car, appointment.apartment);
+  }
+
+  private async sendCancellationNotifications(
+    user: User,
+    owner: User,
+    car?: Car,
+    apartment?: Apartment
+  ): Promise<void> {
+    try {
+      // Determine the type and details of the appointment
+      const appointmentType = car ? 'car' : 'apartment';
+      const appointmentDetails = car ? car.model : apartment?.fullAddress;
+
+      // Email to the user about the cancellation
+      await this.emailNotificationService.sendEmail(
+        user.email,
+        'Appointment Cancelled',
+        `Your appointment for the ${appointmentType} (${appointmentDetails}) has been cancelled.`
+      );
+
+      // Email to the owner about the cancellation
+      await this.emailNotificationService.sendEmail(
+        owner.email,
+        'Appointment Cancelled',
+        `The appointment for your ${appointmentType} (${appointmentDetails}) has been cancelled by the user.`
+      );
+    } catch (error) {
+      console.error('Error sending cancellation email notifications:', error);
+    }
+  }
+
 }

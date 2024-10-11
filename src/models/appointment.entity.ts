@@ -18,17 +18,17 @@ export class Appointment extends BaseModel {
   endTime: Date
 
   @Column()
-  status: 'pending' | 'accepted' | 'rejected'
+  status: 'pending' | 'accepted' | 'cancelled'
 
-  @ManyToOne(() => Apartment, {nullable: true})
+  @ManyToOne(() => Apartment, { nullable: true })
   apartment: Relation<Apartment>
 
-  @ManyToOne(() => Car, {nullable: true})
+  @ManyToOne(() => Car, { nullable: true })
   car: Relation<Car>
 
-  @ManyToOne(() => User, {nullable: true})
+  @ManyToOne(() => User, { nullable: true })
   user: Relation<User>
 
-  @ManyToOne(() => User, {nullable: true})
+  @ManyToOne(() => User, { nullable: true })
   owner: Relation<User>
 }
