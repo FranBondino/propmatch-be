@@ -60,7 +60,7 @@ export class UserService {
     return GetAllPaginatedQB(qb, query)
   }
 
-  public async findPotentialRoommates(currentUser: User): Promise<User[]> {
+  public async findPotentialRoommates(query: PaginateQueryRaw, currentUser: User): Promise<Paginated<User>> {
     const {
       preferredCity,
       maxBudget,
@@ -69,21 +69,36 @@ export class UserService {
       noiseTolerance,
       preferredLanguage,
       genderPreference,
-      gender
     } = currentUser.preferences || {};
-  
-    return this.repository.createQueryBuilder('user')
+
+    // 1. Check if the current user has their preferences fully set
+    if (!preferredCity || !maxBudget || smoking === undefined || pets === undefined ||
+      noiseTolerance === undefined || !preferredLanguage || !genderPreference) {
+      throw new Error('User preferences are incomplete or not set.');
+    }
+
+    // 2. Query to get all users of type 'user' who also have preferences set
+    const qb = this.repository.createQueryBuilder('user')
       .where('user.type = :type', { type: 'user' })
-      .andWhere('user.preferences ->> \'preferredCity\' = :city', { city: preferredCity })
-      .andWhere('user.preferences ->> \'maxBudget\'::float >= :budget', { budget: maxBudget })
-      .andWhere('user.preferences ->> \'smoking\'::boolean = :smoking', { smoking })
-      .andWhere('user.preferences ->> \'pets\'::boolean = :pets', { pets })
-      .andWhere('user.preferences ->> \'noiseTolerance\'::float >= :noiseTolerance', { noiseTolerance })
-      .andWhere('user.preferences ->> \'preferredLanguage\' = :language', { language: preferredLanguage })
-      .andWhere('user.preferences ->> \'gender\' = :gender', { gender: genderPreference })
       .andWhere('user.id != :id', { id: currentUser.id }) // Exclude current user
-      .getMany();
+      .andWhere('user.preferences IS NOT NULL') // Ensure preferences are set
+      .andWhere(`user.preferences ->> 'preferredCity' IS NOT NULL`)
+      .andWhere(`user.preferences ->> 'maxBudget' IS NOT NULL`)
+      .andWhere(`user.preferences ->> 'smoking' IS NOT NULL`)
+      .andWhere(`user.preferences ->> 'pets' IS NOT NULL`)
+      .andWhere(`user.preferences ->> 'noiseTolerance' IS NOT NULL`)
+      .andWhere(`user.preferences ->> 'preferredLanguage' IS NOT NULL`)
+      .andWhere(`user.preferences ->> 'gender' IS NOT NULL`); // Ensure all relevant preferences are set
+
+    // 3. Add optional search filtering based on the query
+    if (query.search) {
+      qb.andWhere(`LOWER(user.fullName) Like '%${query.search.toLowerCase()}%'`);
+    }
+
+    // 4. Execute the paginated query using your helper function
+    return GetAllPaginatedQB(qb, query);
   }
+
 
   public async create(dto: CreateUserDto): Promise<User> {
     dto.password = await this.userUtils.hashPassword(dto.password)
@@ -95,19 +110,19 @@ export class UserService {
   public async signup(dto: CreateUserDto): Promise<User> {
     // Check if the email is already taken
     await this.isEmailFree(dto.email);
-  
+
     // Hash the user's password
     dto.password = await this.userUtils.hashPassword(dto.password);
-  
+
     // Create the user entity
     const newUser = this.repository.create(dto);
-  
+
     // Save the new user to the database
     const savedUser = await this.repository.save(newUser);
-  
+
     // Remove sensitive information before returning the user
     delete savedUser.password;
-  
+
     return savedUser
   }
 
