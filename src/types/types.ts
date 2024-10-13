@@ -70,9 +70,18 @@ export enum UserType {
 export type UserTypes = keyof typeof UserType
 
 export enum GenderType {
-  male = 'male', 
+  male = 'male',
   female = 'female'
 }
+
+export type UserPreferences = {
+  preferredCity?: string;
+  maxBudget?: number;
+  smoking?: boolean;
+  pets?: boolean;
+  preferredLanguage?: string;
+  genderPreference?: string;
+};
 
 export type ExpenseType = 'Apartment' | 'Car'
 

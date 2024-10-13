@@ -79,16 +79,8 @@ export class UserPreferencesDto {
   pets?: boolean;
 
   @IsOptional()
-  @IsNumber()
-  noiseTolerance?: number;
-
-  @IsOptional()
   @IsString()
   preferredLanguage?: string;
-
-  @IsOptional()
-  @IsString()
-  gender?: string;
 
   @IsOptional()
   @IsString()

@@ -1,5 +1,5 @@
 import { Exclude } from 'class-transformer'
-import { UserType, UserTypes } from '../types/types'
+import { UserPreferences, UserType, UserTypes } from '../types/types'
 import {
   Column,
   Entity,
@@ -24,6 +24,9 @@ export class User extends BaseModel {
   @Column({ default: UserType.user, type: 'varchar' })
   type: UserTypes
 
+  @Column()
+  gender: 'male' | 'female'
+
   @Exclude()
   @Column()
   password: string
@@ -45,15 +48,6 @@ export class User extends BaseModel {
   ownedAppointments: Appointment[];
 
   @Column('json', { nullable: true })
-  preferences: {
-    preferredCity?: string;
-    maxBudget?: number;
-    smoking?: boolean;
-    pets?: boolean;
-    noiseTolerance?: number;
-    preferredLanguage?: string;
-    gender?: string;
-    genderPreference?: string;
-  };
+  preferences: UserPreferences
 }
 

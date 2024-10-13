@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common'
 import { FindOneOptions, FindOptionsWhere, Repository } from 'typeorm'
 import { GetAllPaginatedQB } from '../../../helpers/pagination.helper'
-import { Paginated, PaginateQueryRaw } from '../../../types/types'
+import { Paginated, PaginateQueryRaw, UserPreferences } from '../../../types/types'
 import { CreateUserDto, UpdateMyProfileDto, UpdateUserDto } from './user.dto'
 import { errorsCatalogs } from '../../../catalogs/errors-catalogs'
 import { IUserUtils } from './user.interface'
@@ -60,21 +60,56 @@ export class UserService {
     return GetAllPaginatedQB(qb, query)
   }
 
+  public async setPreferences(currentUser: User, preferences: Partial<UserPreferences>): Promise<User> {
+    // 1. Validate the input preferences
+    const {
+      preferredCity,
+      maxBudget,
+      smoking,
+      pets,
+      preferredLanguage,
+      genderPreference,
+    } = preferences;
+
+    // Validation checks (you can expand these based on your rules)
+    if (!preferredCity) throw new Error('Preferred city is required.');
+    if (maxBudget === undefined || maxBudget < 0) throw new Error('Max budget must be a positive number.');
+    if (smoking === undefined) throw new Error('Smoking preference is required.');
+    if (pets === undefined) throw new Error('Pets preference is required.');
+    if (!preferredLanguage) throw new Error('Preferred language is required.');
+    if (!genderPreference) throw new Error('Gender preference is required.');
+
+    // 2. Update the current user's preferences in the database
+    currentUser.preferences = {
+      ...currentUser.preferences, // Keep existing preferences that are not being updated
+      preferredCity,
+      maxBudget,
+      smoking,
+      pets,
+      preferredLanguage,
+      genderPreference,
+    };
+
+    await this.repository.save(currentUser); // Save the updated user preferences
+
+    // 3. Return the updated user
+    return currentUser;
+  }
+
+
   public async findPotentialRoommates(query: PaginateQueryRaw, currentUser: User): Promise<Paginated<User>> {
     const {
       preferredCity,
       maxBudget,
       smoking,
       pets,
-      noiseTolerance,
       preferredLanguage,
       genderPreference,
     } = currentUser.preferences || {};
 
     // 1. Check if the current user has their preferences fully set
-    if (!preferredCity || !maxBudget || smoking === undefined || pets === undefined ||
-      noiseTolerance === undefined || !preferredLanguage || !genderPreference) {
-      throw new Error('User preferences are incomplete or not set.');
+    if (!preferredCity || !maxBudget || smoking === undefined || pets === undefined || !preferredLanguage || !genderPreference) {
+      throw new Error('Primero debes completar tus preferencias para utilizar esta funcionalidad');
     }
 
     // 2. Query to get all users of type 'user' who also have preferences set
@@ -86,9 +121,8 @@ export class UserService {
       .andWhere(`user.preferences ->> 'maxBudget' IS NOT NULL`)
       .andWhere(`user.preferences ->> 'smoking' IS NOT NULL`)
       .andWhere(`user.preferences ->> 'pets' IS NOT NULL`)
-      .andWhere(`user.preferences ->> 'noiseTolerance' IS NOT NULL`)
       .andWhere(`user.preferences ->> 'preferredLanguage' IS NOT NULL`)
-      .andWhere(`user.preferences ->> 'gender' IS NOT NULL`); // Ensure all relevant preferences are set
+      .andWhere(`user.gender = :genderPreference`, { genderPreference: currentUser.preferences.genderPreference });
 
     // 3. Add optional search filtering based on the query
     if (query.search) {
