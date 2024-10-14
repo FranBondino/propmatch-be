@@ -31,6 +31,7 @@ import { LogService } from '../log/log.service'
 import {
   CreateUserDto,
   UpdateUserDto,
+  UserPreferencesDto,
   UserResponseDto
 } from './user.dto'
 import { UserService } from './user.service'
@@ -81,16 +82,25 @@ export class UserController {
     return this.service.getAll(query)
   }
 
+  @Post('preferences')
+  @UseGuards(JwtAuthGuard)
+  public async setPreferences(@Body() dto: UserPreferencesDto, @Req() req: Request): Promise<User> {
+    const currentUser: User = req.user as User;
+
+    // Update the preferences using the service
+    return this.service.setPreferences(currentUser, dto);
+  }
+
   @Get('find-roommates')
 @UseGuards(JwtAuthGuard)
-public async getPotentialRoommates(@Req() req: Request): Promise<UserResponseDto[]> {
+public async getPotentialRoommates(@Query() query: PaginateQueryRaw, @Req() req: Request): Promise<Paginated<User>> {
   const currentUser: User = req.user as User;
 
   if (currentUser.type !== UserType.user) {
     throw new ForbiddenException('This functionality is only available to users.');
   }
 
-  return this.service.findPotentialRoommates(currentUser);
+  return this.service.findPotentialRoommates(query, currentUser);
 }
 
   @Delete('/:id')

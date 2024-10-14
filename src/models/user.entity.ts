@@ -24,7 +24,7 @@ export class User extends BaseModel {
   @Column({ default: UserType.user, type: 'varchar' })
   type: UserTypes
 
-  @Column()
+  @Column({ nullable: true })
   gender: 'male' | 'female'
 
   @Exclude()
