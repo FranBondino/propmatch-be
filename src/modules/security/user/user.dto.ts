@@ -62,27 +62,21 @@ export class UpdateUserDto {
 }
 
 export class UserPreferencesDto {
-  @IsOptional()
   @IsString()
   preferredCity?: string;
 
-  @IsOptional()
   @IsNumber()
   maxBudget?: number;
 
-  @IsOptional()
   @IsBoolean()
   smoking?: boolean;
 
-  @IsOptional()
   @IsBoolean()
   pets?: boolean;
 
-  @IsOptional()
   @IsString()
   preferredLanguage?: string;
 
-  @IsOptional()
   @IsString()
   genderPreference?: string;
 }

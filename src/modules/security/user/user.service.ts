@@ -7,7 +7,7 @@ import {
 import { FindOneOptions, FindOptionsWhere, Repository } from 'typeorm'
 import { GetAllPaginatedQB } from '../../../helpers/pagination.helper'
 import { Paginated, PaginateQueryRaw, UserPreferences } from '../../../types/types'
-import { CreateUserDto, UpdateMyProfileDto, UpdateUserDto } from './user.dto'
+import { CreateUserDto, UpdateMyProfileDto, UpdateUserDto, UserPreferencesDto } from './user.dto'
 import { errorsCatalogs } from '../../../catalogs/errors-catalogs'
 import { IUserUtils } from './user.interface'
 import { USER_UTILS } from './user-utils/user.utils'
@@ -60,7 +60,8 @@ export class UserService {
     return GetAllPaginatedQB(qb, query)
   }
 
-  public async setPreferences(currentUser: User, preferences: Partial<UserPreferences>): Promise<User> {
+  /*
+  public async setPreferences(currentUser: User, dto: UserPreferencesDto): Promise<User> {
     // 1. Validate the input preferences
     const {
       preferredCity,
@@ -69,7 +70,7 @@ export class UserService {
       pets,
       preferredLanguage,
       genderPreference,
-    } = preferences;
+    } = dto;
 
     // Validation checks (you can expand these based on your rules)
     if (!preferredCity) throw new Error('Preferred city is required.');
@@ -82,17 +83,29 @@ export class UserService {
     // 2. Update the current user's preferences in the database
     currentUser.preferences = {
       ...currentUser.preferences, // Keep existing preferences that are not being updated
-      preferredCity,
-      maxBudget,
-      smoking,
-      pets,
-      preferredLanguage,
-      genderPreference,
+      ...dto,
     };
 
     await this.repository.save(currentUser); // Save the updated user preferences
 
     // 3. Return the updated user
+    return currentUser;
+  }
+*/
+
+  public async setPreferences(
+    currentUser: User,
+    preferencesDto: UserPreferencesDto
+  ): Promise<User> {
+    // Check and apply new preferences
+    currentUser.preferences = {
+      ...currentUser.preferences, // Retain existing preferences
+      ...preferencesDto,          // Override with new values from DTO
+    };
+
+    // Save the user with updated preferences
+    await this.repository.save(currentUser);
+
     return currentUser;
   }
 
@@ -107,29 +120,45 @@ export class UserService {
       genderPreference,
     } = currentUser.preferences || {};
 
-    // 1. Check if the current user has their preferences fully set
+    // 1. Ensure the current user has set preferences
     if (!preferredCity || !maxBudget || smoking === undefined || pets === undefined || !preferredLanguage || !genderPreference) {
       throw new Error('Primero debes completar tus preferencias para utilizar esta funcionalidad');
     }
 
-    // 2. Query to get all users of type 'user' who also have preferences set
+    // 2. Build the query with scoring mechanism
     const qb = this.repository.createQueryBuilder('user')
       .where('user.type = :type', { type: 'user' })
-      .andWhere('user.id != :id', { id: currentUser.id }) // Exclude current user
-      .andWhere('user.preferences IS NOT NULL') // Ensure preferences are set
-      .andWhere(`user.preferences ->> 'preferredCity' IS NOT NULL`)
+      .andWhere('user.id != :id', { id: currentUser.id }) // Exclude the current user
+      .andWhere('user.preferences IS NOT NULL')
+      .andWhere(`user.preferences ->> 'preferredCity' = :preferredCity`, { preferredCity })
       .andWhere(`user.preferences ->> 'maxBudget' IS NOT NULL`)
       .andWhere(`user.preferences ->> 'smoking' IS NOT NULL`)
       .andWhere(`user.preferences ->> 'pets' IS NOT NULL`)
       .andWhere(`user.preferences ->> 'preferredLanguage' IS NOT NULL`)
-      .andWhere(`user.gender = :genderPreference`, { genderPreference: currentUser.preferences.genderPreference });
+      .andWhere(`user.gender = :genderPreference`, { genderPreference: currentUser.preferences.genderPreference })
 
-    // 3. Add optional search filtering based on the query
-    if (query.search) {
-      qb.andWhere(`LOWER(user.fullName) Like '%${query.search.toLowerCase()}%'`);
-    }
+      // 3. Scoring mechanism
+      .addSelect(`
+        (
+          CASE 
+            WHEN user.preferences ->> 'smoking' = :smoking THEN 1 ELSE 0 END + 
+            CASE WHEN user.preferences ->> 'pets' = :pets THEN 1 ELSE 0 END + 
+            CASE WHEN user.preferences ->> 'preferredLanguage' = :preferredLanguage THEN 1 ELSE 0 END + 
+            (1 - ABS((CAST(user.preferences ->> 'maxBudget' AS INTEGER) - :maxBudget) / NULLIF(:maxBudget, 0))) * 10
+        )`, 'matchScore')
 
-    // 4. Execute the paginated query using your helper function
+      // Add filtering by the user's preferences
+      .setParameters({
+        smoking: smoking.toString(),
+        pets: pets.toString(),
+        preferredLanguage,
+        maxBudget,
+      })
+
+      // 4. Order by the calculated score
+      .orderBy('matchScore', 'DESC');
+
+    // 5. Execute the paginated query using your helper function
     return GetAllPaginatedQB(qb, query);
   }
 

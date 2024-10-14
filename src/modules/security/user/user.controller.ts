@@ -82,7 +82,7 @@ export class UserController {
     return this.service.getAll(query)
   }
 
-  @Post('preferences')
+  @Put('preferences')
   @UseGuards(JwtAuthGuard)
   public async setPreferences(@Body() dto: UserPreferencesDto, @Req() req: Request): Promise<User> {
     const currentUser: User = req.user as User;
@@ -92,16 +92,16 @@ export class UserController {
   }
 
   @Get('find-roommates')
-@UseGuards(JwtAuthGuard)
-public async getPotentialRoommates(@Query() query: PaginateQueryRaw, @Req() req: Request): Promise<Paginated<User>> {
-  const currentUser: User = req.user as User;
+  @UseGuards(JwtAuthGuard)
+  public async getPotentialRoommates(@Query() query: PaginateQueryRaw, @Req() req: Request): Promise<Paginated<User>> {
+    const currentUser: User = req.user as User;
 
-  if (currentUser.type !== UserType.user) {
-    throw new ForbiddenException('This functionality is only available to users.');
+    if (currentUser.type !== UserType.user) {
+      throw new ForbiddenException('This functionality is only available to users.');
+    }
+
+    return this.service.findPotentialRoommates(query, currentUser);
   }
-
-  return this.service.findPotentialRoommates(query, currentUser);
-}
 
   @Delete('/:id')
   public async delete(@Param() { id }: IdRequired, @Req() req: any): Promise<void> {
