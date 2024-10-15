@@ -94,19 +94,21 @@ export class UserService {
 */
 
   public async setPreferences(
-    currentUser: User,
+    userId: string,
     preferencesDto: UserPreferencesDto
   ): Promise<User> {
+    const user = await this.repository.findOne({ where: { id: userId} })
+    if (!user) throw new NotFoundException("User not found");
     // Check and apply new preferences
-    currentUser.preferences = {
-      ...currentUser.preferences, // Retain existing preferences
+    user.preferences = {
+      ...user.preferences, // Retain existing preferences
       ...preferencesDto,          // Override with new values from DTO
     };
 
     // Save the user with updated preferences
-    await this.repository.save(currentUser);
+    await this.repository.save(user);
 
-    return currentUser;
+    return user;
   }
 
 

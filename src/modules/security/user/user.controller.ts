@@ -85,10 +85,10 @@ export class UserController {
   @Put('preferences')
   @UseGuards(JwtAuthGuard)
   public async setPreferences(@Body() dto: UserPreferencesDto, @Req() req: Request): Promise<User> {
-    const currentUser: User = req.user as User;
+    const user = req.user as User;
 
     // Update the preferences using the service
-    return this.service.setPreferences(currentUser, dto);
+    return this.service.setPreferences(user.id, dto);
   }
 
   @Get('find-roommates')
