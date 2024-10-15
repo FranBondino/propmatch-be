@@ -16,6 +16,7 @@ import {
   atLeastOneNumber,
   validCharacters
 } from '../../../helpers/password.helper'
+import { Transform } from 'class-transformer'
 
 
 const { admin, user, owner } = UserType
@@ -62,21 +63,30 @@ export class UpdateUserDto {
 }
 
 export class UserPreferencesDto {
+  @IsOptional()
   @IsString()
   preferredCity?: string;
 
+  @IsOptional()
+  @Transform(({ value }) => parseFloat(value))  // Transform string to number
   @IsNumber()
   maxBudget?: number;
 
+  @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true)  // Transform "true"/"false" strings to boolean
   @IsBoolean()
   smoking?: boolean;
 
+  @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true)  // Transform "true"/"false" strings to boolean
   @IsBoolean()
   pets?: boolean;
 
+  @IsOptional()
   @IsString()
   preferredLanguage?: string;
 
+  @IsOptional()
   @IsString()
   genderPreference?: string;
 }
