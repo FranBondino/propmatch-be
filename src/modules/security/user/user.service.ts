@@ -2,11 +2,12 @@ import {
   BadRequestException,
   Inject,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common'
 import { FindOneOptions, FindOptionsWhere, Repository } from 'typeorm'
 import { GetAllPaginatedQB } from '../../../helpers/pagination.helper'
-import { Paginated, PaginateQueryRaw, UserPreferences } from '../../../types/types'
+import { Paginated, PaginateQueryRaw, UserPreferences, UserWithMatchScore } from '../../../types/types'
 import { CreateUserDto, UpdateMyProfileDto, UpdateUserDto, UserPreferencesDto } from './user.dto'
 import { errorsCatalogs } from '../../../catalogs/errors-catalogs'
 import { IUserUtils } from './user.interface'
@@ -22,11 +23,15 @@ const {
 
 @Injectable()
 export class UserService {
+
+  private readonly logger = new Logger(UserService.name);
+
+
   constructor(
     @InjectRepository(User)
     private readonly repository: Repository<User>,
     @Inject(USER_UTILS)
-    private readonly userUtils: IUserUtils
+    private readonly userUtils: IUserUtils,
   ) { }
 
   public async getById(id: string, options: FindOptionsWhere<User>): Promise<User> {
@@ -97,7 +102,7 @@ export class UserService {
     userId: string,
     preferencesDto: UserPreferencesDto
   ): Promise<User> {
-    const user = await this.repository.findOne({ where: { id: userId} })
+    const user = await this.repository.findOne({ where: { id: userId } })
     if (!user) throw new NotFoundException("User not found");
     // Check and apply new preferences
     user.preferences = {
@@ -110,9 +115,232 @@ export class UserService {
 
     return user;
   }
+  /*
+    public async findPotentialRoommates(query: PaginateQueryRaw, userId: string): Promise<Paginated<User>> {
+      const currentUser = await this.repository.findOne({ where: { id: userId } }); // Fetch the user by their ID
+  
+      const {
+        preferredCity,
+        maxBudget,
+        smoking,
+        pets,
+        preferredLanguage,
+        genderPreference,
+      } = currentUser.preferences || {};
+  
+      // 1. Ensure the current user has set preferences
+      if (!preferredCity || !maxBudget || smoking === undefined || pets === undefined || !preferredLanguage || !genderPreference) {
+        throw new Error('Primero debes completar tus preferencias para utilizar esta funcionalidad');
+      }
+  
+      // 2. Build the query with scoring mechanism
+      const qb = this.repository.createQueryBuilder('user')
+        .where('user.type = :type', { type: 'user' })
+        .andWhere('user.id != :id', { id: currentUser.id })
+        .andWhere('user.preferences IS NOT NULL')
+        .andWhere(`user.preferences ->> 'preferredCity' = :preferredCity`, { preferredCity })
+        .andWhere(`user.preferences ->> 'maxBudget' IS NOT NULL`)
+        .andWhere(`user.preferences ->> 'smoking' IS NOT NULL`)
+        .andWhere(`user.preferences ->> 'pets' IS NOT NULL`)
+        .andWhere(`user.preferences ->> 'preferredLanguage' IS NOT NULL`)
+        .andWhere(`user.gender = :genderPreference`, { genderPreference: currentUser.preferences.genderPreference })
+  
+        // 3. Scoring mechanism with aliasing using double quotes
+        .addSelect(`(
+        CASE 
+          WHEN user.preferences ->> 'smoking' = :smoking THEN 1 ELSE 0 END + 
+          CASE WHEN user.preferences ->> 'pets' = :pets THEN 1 ELSE 0 END + 
+          CASE WHEN user.preferences ->> 'preferredLanguage' = :preferredLanguage THEN 1 ELSE 0 END + 
+          (1 - ABS((CAST(user.preferences ->> 'maxBudget' AS INTEGER) - :maxBudget) / NULLIF(:maxBudget, 0))) * 10
+      )`, 'matchScore')  // Alias with double quotes
+  
+        .setParameters({
+          smoking: smoking.toString(),
+          pets: pets.toString(),
+          preferredLanguage,
+          maxBudget,
+        })
+  
+        // 4. Order by the calculated score using the alias
+        .orderBy('"matchScore"', 'DESC');
+  
+      // 5. Execute the paginated query
+      return GetAllPaginatedQB(qb, query);
+    }
+  */
+  /*
+    public async findPotentialRoommates(query: PaginateQueryRaw, userId: string): Promise<Paginated<User>> {
+      const currentUser = await this.repository.findOne({ where: { id: userId } }); // Fetch the user by their ID
+    
+      const {
+        preferredCity,
+        maxBudget,
+        smoking,
+        pets,
+        preferredLanguage,
+        genderPreference,
+      } = currentUser.preferences || {};
+    
+      // 1. Ensure the current user has set preferences
+      if (!preferredCity || !maxBudget || smoking === undefined || pets === undefined || !preferredLanguage || !genderPreference) {
+        throw new Error('Primero debes completar tus preferencias para utilizar esta funcionalidad');
+      }
+    
+      // 2. Build the query without scoring logic
+      const qb = this.repository.createQueryBuilder('user')
+        .where('user.type = :type', { type: 'user' })
+        .andWhere('user.id != :id', { id: currentUser.id })
+        .andWhere('user.preferences IS NOT NULL')
+        .andWhere(`user.preferences ->> 'preferredCity' = :preferredCity`, { preferredCity })
+        .andWhere(`user.preferences ->> 'maxBudget' IS NOT NULL`)
+        .andWhere(`user.preferences ->> 'smoking' IS NOT NULL`)
+        .andWhere(`user.preferences ->> 'pets' IS NOT NULL`)
+        .andWhere(`user.preferences ->> 'preferredLanguage' IS NOT NULL`)
+        .andWhere(`user.gender = :genderPreference`, { genderPreference: currentUser.preferences.genderPreference })
+        .orderBy('user.id', 'DESC'); // Sort by user ID to ensure consistent ordering
+    
+      // 3. Fetch user data using the paginated query
+      const users = await GetAllPaginatedQB(qb, query);
+    
+      // 4. Calculate score for each user in application logic
+      const scoredUsers = users.map((user) => {
+        const { preferences } = user;
+        const score = (
+          (preferences.smoking === currentUser.preferences.smoking ? 1 : 0) +
+          (preferences.pets === currentUser.preferences.pets ? 1 : 0) +
+          (preferences.preferredLanguage === currentUser.preferences.preferredLanguage ? 1 : 0) +
+          (1 - Math.abs((preferences.maxBudget - currentUser.preferences.maxBudget) / currentUser.preferences.maxBudget)) * 10
+        );
+        return { ...user, score };
+      });
+    
+      // 5. Sort by score (descending)
+      scoredUsers.sort((a, b) => b.score - a.score);
+    
+      // 6. Return the sorted users with score
+     return scoredUsers;
+    } 
+  */
+  /*
+   public async findPotentialRoommates(query: PaginateQueryRaw, userId: string): Promise<Paginated<User>> {
+     const currentUser = await this.repository.findOne({ where: { id: userId } });
+ 
+     const {
+       preferredCity,
+       maxBudget,
+       smoking,
+       pets,
+       preferredLanguage,
+       genderPreference,
+     } = currentUser.preferences || {};
+ 
+     // 1. Ensure the current user has set preferences
+     if (!preferredCity || !maxBudget || smoking === undefined || pets === undefined || !preferredLanguage || !genderPreference) {
+       throw new Error('Primero debes completar tus preferencias para utilizar esta funcionalidad');
+     }
+ 
+     // 2. Build the query
+     const qb = this.repository.createQueryBuilder('user')
+       .where('user.type = :type', { type: 'user' })
+       .andWhere('user.id != :id', { id: currentUser.id })
+       .andWhere('user.preferences IS NOT NULL')
+       .andWhere(`user.preferences ->> 'preferredCity' = :preferredCity`, { preferredCity })
+       .andWhere(`user.preferences ->> 'maxBudget' IS NOT NULL`)
+       .andWhere(`user.preferences ->> 'smoking' IS NOT NULL`)
+       .andWhere(`user.preferences ->> 'pets' IS NOT NULL`)
+       .andWhere(`user.preferences ->> 'preferredLanguage' IS NOT NULL`)
+       .andWhere(`user.gender = :genderPreference`, { genderPreference: currentUser.preferences.genderPreference })
+ 
+     // 3. Fetch user data using the paginated query
+     const paginatedUsers = await GetAllPaginatedQB(qb, query);
+ 
+     // 4. Calculate score for each user in application logic
+     const scoredUsers = paginatedUsers.rows.map((user) => {
+       const { preferences } = user;
+       const score = (
+         (preferences.smoking === currentUser.preferences.smoking ? 1 : 0) +
+         (preferences.pets === currentUser.preferences.pets ? 1 : 0) +
+         (preferences.preferredLanguage === currentUser.preferences.preferredLanguage ? 1 : 0) +
+         (1 - Math.abs((preferences.maxBudget - currentUser.preferences.maxBudget) / currentUser.preferences.maxBudget)) * 10
+       );
+       return { ...user, score } as UserWithMatchScore;
+     });
+ 
+     // 5. Sort by score (descending)
+     scoredUsers.sort((a, b) => b.score - a.score);
+ 
+     // 6. Return the sorted users with score, maintaining pagination structure
+     return {
+       ...paginatedUsers,
+       rows: scoredUsers, // Replace the original items with scored ones
+     };
+   }
+ */
+  /*
+    public async findPotentialRoommates(userId: string): Promise<User[]> {
+      const currentUser = await this.repository.findOne({ where: { id: userId } });
+    
+      const {
+        preferredCity,
+        maxBudget,
+        smoking,
+        pets,
+        preferredLanguage,
+        genderPreference,
+      } = currentUser.preferences || {};
+    
+      // 1. Ensure the current user has set preferences
+      if (!preferredCity || !maxBudget || smoking === undefined || pets === undefined || !preferredLanguage || !genderPreference) {
+        throw new Error('Primero debes completar tus preferencias para utilizar esta funcionalidad');
+      }
+    
+      // 2. Retrieve all users (without pagination) who are not the current user and have preferences set
+      const allUsers = await this.repository.createQueryBuilder('user')
+        .where('user.type = :type', { type: 'user' })
+        .andWhere('user.id != :id', { id: currentUser.id })
+        .andWhere('user.preferences IS NOT NULL')
+        .getMany();
+    
+      // 3. Filter and calculate score for each user
+      const scoredUsers = allUsers
+        .filter((user) => {
+          const { preferences } = user;
+    
+          // Filter by the matching criteria (city, gender, etc.)
+          return (
+            preferences.preferredCity === currentUser.preferences.preferredCity &&
+            preferences.maxBudget !== null &&
+            preferences.smoking !== null &&
+            preferences.pets !== null &&
+            preferences.preferredLanguage !== null &&
+            user.gender === currentUser.preferences.genderPreference
+          );
+        })
+        .map((user) => {
+          const { preferences } = user;
+    
+          // Calculate score based on matching preferences
+          const score = (
+            (preferences.smoking === currentUser.preferences.smoking ? 1 : 0) +
+            (preferences.pets === currentUser.preferences.pets ? 1 : 0) +
+            (preferences.preferredLanguage === currentUser.preferences.preferredLanguage ? 1 : 0) +
+            (1 - Math.abs((preferences.maxBudget - currentUser.preferences.maxBudget) / currentUser.preferences.maxBudget)) * 10
+          );
+    
+          return { ...user, score } as UserWithMatchScore;
+        });
+    
+      // 4. Sort by score (descending order)
+      scoredUsers.sort((a, b) => b.score - a.score);
+    
+      // 5. Return the scored and sorted users (without pagination)
+      return scoredUsers;
+    }
+      */
 
+  public async findPotentialRoommates(userId: string): Promise<UserWithMatchScore[]> {
+    const currentUser = await this.repository.findOne({ where: { id: userId } });
 
-  public async findPotentialRoommates(query: PaginateQueryRaw, currentUser: User): Promise<Paginated<User>> {
     const {
       preferredCity,
       maxBudget,
@@ -127,41 +355,44 @@ export class UserService {
       throw new Error('Primero debes completar tus preferencias para utilizar esta funcionalidad');
     }
 
-    // 2. Build the query with scoring mechanism
-    const qb = this.repository.createQueryBuilder('user')
+    // 2. Retrieve all users (without pagination) who are not the current user and have preferences set
+    const allUsers = await this.repository.createQueryBuilder('user')
       .where('user.type = :type', { type: 'user' })
-      .andWhere('user.id != :id', { id: currentUser.id }) // Exclude the current user
+      .andWhere('user.id != :id', { id: currentUser.id })
       .andWhere('user.preferences IS NOT NULL')
-      .andWhere(`user.preferences ->> 'preferredCity' = :preferredCity`, { preferredCity })
-      .andWhere(`user.preferences ->> 'maxBudget' IS NOT NULL`)
-      .andWhere(`user.preferences ->> 'smoking' IS NOT NULL`)
-      .andWhere(`user.preferences ->> 'pets' IS NOT NULL`)
-      .andWhere(`user.preferences ->> 'preferredLanguage' IS NOT NULL`)
-      .andWhere(`user.gender = :genderPreference`, { genderPreference: currentUser.preferences.genderPreference })
+      .getMany();
 
-      // 3. Scoring mechanism
-      .addSelect(`
-        (
-          CASE 
-            WHEN user.preferences ->> 'smoking' = :smoking THEN 1 ELSE 0 END + 
-            CASE WHEN user.preferences ->> 'pets' = :pets THEN 1 ELSE 0 END + 
-            CASE WHEN user.preferences ->> 'preferredLanguage' = :preferredLanguage THEN 1 ELSE 0 END + 
-            (1 - ABS((CAST(user.preferences ->> 'maxBudget' AS INTEGER) - :maxBudget) / NULLIF(:maxBudget, 0))) * 10
-        )`, 'matchScore')
+    // 3. Filter and calculate score for each user
+    const scoredUsers = allUsers
+      .filter((user) => {
+        const { preferences } = user;
 
-      // Add filtering by the user's preferences
-      .setParameters({
-        smoking: smoking.toString(),
-        pets: pets.toString(),
-        preferredLanguage,
-        maxBudget,
+        // Filter by the matching criteria (city, gender, etc.)
+        return (
+          preferences.preferredCity === currentUser.preferences.preferredCity &&
+          user.gender === currentUser.preferences.genderPreference
+        );
       })
+      .map((user) => {
+        const { preferences } = user;
 
-      // 4. Order by the calculated score
-      .orderBy('matchScore', 'DESC');
+        // Calculate score based on matching preferences
+        const score = (
+          (preferences.smoking === currentUser.preferences.smoking ? 1 : 0) +
+          (preferences.pets === currentUser.preferences.pets ? 1 : 0) +
+          (preferences.preferredLanguage === currentUser.preferences.preferredLanguage ? 1 : 0) +
+          (1 - Math.abs((preferences.maxBudget - currentUser.preferences.maxBudget) / currentUser.preferences.maxBudget)) * 10
+        );
 
-    // 5. Execute the paginated query using your helper function
-    return GetAllPaginatedQB(qb, query);
+        // Return user with calculated score
+        return { ...user, score } as UserWithMatchScore;
+      });
+
+    // 4. Sort by score (descending order)
+    scoredUsers.sort((a, b) => b.score - a.score);
+
+    // 5. Return the scored and sorted users (without pagination)
+    return scoredUsers;
   }
 
 

@@ -5,6 +5,7 @@ import {
   Delete,
   ForbiddenException,
   Get,
+  Logger,
   Param,
   Post,
   Put,
@@ -23,7 +24,7 @@ import {
 } from '../../../helpers/log.helper'
 import { ResponseInterceptor } from '../../../helpers/response.interceptor'
 import { getOptionsFromJSON } from '../../../helpers/validation.helper'
-import { Paginated, PaginateQueryRaw, UserType } from '../../../types/types'
+import { Paginated, PaginateQueryRaw, UserType, UserWithMatchScore } from '../../../types/types'
 import { JwtAuthGuard } from '../auth/auth.guard'
 import { AllowedUsersGuard } from '../authorization/allowed-user-type.guard'
 import { AllowedUsers } from '../authorization/permission.decorator'
@@ -40,6 +41,8 @@ import { User } from '../../../models/user.entity'
 @Controller('users')
 @UseInterceptors(ResponseInterceptor, ClassSerializerInterceptor)
 export class UserController {
+  private readonly logger = new Logger(UserController.name) // Define logger
+
   constructor(
     private readonly service: UserService,
     private readonly logService: LogService,
@@ -91,17 +94,23 @@ export class UserController {
     return this.service.setPreferences(user.id, dto);
   }
 
-  @Get('find-roommates')
+  @Get('/matching/find-roommates')
   @UseGuards(JwtAuthGuard)
-  public async getPotentialRoommates(@Query() query: PaginateQueryRaw, @Req() req: Request): Promise<Paginated<User>> {
-    const currentUser: User = req.user as User;
+  public async getPotentialRoommates(@Req() req: Request): Promise<UserWithMatchScore[]> {
+    const user = req.user as User;
 
-    if (currentUser.type !== UserType.user) {
+    // Log the authenticated user's ID
+    this.logger.log(`Fetching potential roommates for user ID: ${user.id}`);
+
+    // Check if the user has the right type
+    if (user.type !== UserType.user) {
       throw new ForbiddenException('This functionality is only available to users.');
     }
 
-    return this.service.findPotentialRoommates(query, currentUser);
+    // Call the updated service method (no pagination needed anymore)
+    return this.service.findPotentialRoommates(user.id);
   }
+
 
   @Delete('/:id')
   public async delete(@Param() { id }: IdRequired, @Req() req: any): Promise<void> {

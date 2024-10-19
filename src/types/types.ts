@@ -1,5 +1,6 @@
 import 'reflect-metadata'
 import { Type } from 'class-transformer'
+import { User } from '../models/user.entity'
 
 export interface PaginateQueryRaw {
   page?: string,
@@ -21,6 +22,12 @@ export interface Metadata {
   itemsPerPage: number
   currentPage: number
 }
+
+// Assuming User is your existing User entity
+export interface UserWithMatchScore extends User {
+  score: number; // Add the matchScore property
+}
+
 
 export class Paginated<T> {
   // eslint-disable-next-line

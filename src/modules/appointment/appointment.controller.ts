@@ -48,8 +48,6 @@ export class AppointmentController {
     return this.service.cancelAppointment(id, user.id); // Passing appointmentId and userId
   }
 
-
-
   @Get()
   public async getAll(@Query() query: PaginateQueryRaw): Promise<Paginated<Appointment>> {
     // Implement pagination or filtering logic if needed

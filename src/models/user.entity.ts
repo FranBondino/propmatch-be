@@ -49,5 +49,6 @@ export class User extends BaseModel {
 
   @Column('json', { nullable: true })
   preferences: UserPreferences
+
 }
 
