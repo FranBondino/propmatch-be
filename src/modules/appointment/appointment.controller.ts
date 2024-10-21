@@ -66,12 +66,17 @@ export class AppointmentController {
   }
 
   @Get('/user/:userId')
-  public async getByUser(@Param('userId') userId: string, @Query() query: PaginateQueryRaw): Promise<Paginated<Appointment>> {
-    return this.service.getAppointmentsByUser(userId, query);
+  public async getByUser(@Req() req: Request, @Query() query: PaginateQueryRaw): Promise<Paginated<Appointment>> {
+    const user = req.user as User
+
+    return this.service.getAppointmentsByUser(user.id, query);
   }
 
-  @Get('/owner/:ownerId')
-  public async getByOwner(@Param('ownerId') ownerId: string, @Query() query: PaginateQueryRaw): Promise<Paginated<Appointment>> {
-    return this.service.getAppointmentsByOwner(ownerId, query);
+  @Get('/owner/:userId')
+  public async getByOwner(@Req() req: Request, @Query() query: PaginateQueryRaw): Promise<Paginated<Appointment>> {
+    const user = req.user as User
+
+    return this.service.getAppointmentsByUser(user.id, query);
   }
+
 }
