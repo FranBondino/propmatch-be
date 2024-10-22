@@ -29,6 +29,7 @@ import { AllowedUsersGuard } from '../security/authorization/allowed-user-type.g
 const { admin, owner, user } = UserType
 
 @Controller('apartments')
+@UseGuards(JwtAuthGuard)
 @AllowedUsers(admin, owner, user)
 @UseInterceptors(ResponseInterceptor, ClassSerializerInterceptor)
 export class ApartmentController {
