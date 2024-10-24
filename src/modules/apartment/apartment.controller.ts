@@ -30,7 +30,6 @@ const { admin, owner, user } = UserType
 
 @Controller('apartments')
 @UseGuards(JwtAuthGuard)
-@AllowedUsers(admin, owner, user)
 @UseInterceptors(ResponseInterceptor, ClassSerializerInterceptor)
 export class ApartmentController {
   constructor(

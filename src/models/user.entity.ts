@@ -9,6 +9,7 @@ import { BaseModel } from './base-model.entity'
 import { Appointment } from './appointment.entity'
 import { Car } from './renting/car.entity'
 import { Apartment } from './renting/apartment.entity'
+import { Expense } from './renting/expense.entity'
 
 @Entity()
 export class User extends BaseModel {
@@ -40,6 +41,10 @@ export class User extends BaseModel {
 
   @OneToMany(() => Car, (car) => car.owner, { nullable: true })
   cars: Car[];
+
+  @OneToMany(() => Expense, (expense) => expense.owner, { nullable: true })
+  expenses: Expense[];
+
 
   @OneToMany(() => Appointment, appointment => appointment.user, { nullable: true })
   appointments: Appointment[];

@@ -8,6 +8,7 @@ import { errorsCatalogs } from '../../catalogs/errors-catalogs'
 import { Expense } from '../../models/renting/expense.entity'
 import { InjectRepository } from '@nestjs/typeorm'
 import { Car } from '../../models/renting/car.entity'
+import { User } from '../../models/user.entity'
 
 const {
   EXPENSE_NOT_FOUND,
@@ -22,12 +23,20 @@ export class ExpenseService {
     private readonly repository: Repository<Expense>,
     @InjectRepository(Apartment)
     private readonly apartmentRepository: Repository<Apartment>,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
     @InjectRepository(Car)
     private readonly carRepository: Repository<Car>,
   ) {}
 
-  public async create(dto: CreateExpenseDto): Promise<Expense> {
+  public async create(dto: CreateExpenseDto, userId: string): Promise<Expense> {
     let entity: Apartment | Car | null = null
+
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+    })
+    if (!user) throw new NotFoundException("user was not found")
+
   
     if (dto.apartmentId) {
       entity = await this.apartmentRepository.findOne({
@@ -50,6 +59,7 @@ export class ExpenseService {
     expense.date = dto.date
     expense.description = dto.description
     expense.type = dto.type
+    expense.owner = user
   
     // Associate the apartment or car with the expense
     if (dto.apartmentId) {
@@ -98,6 +108,53 @@ export class ExpenseService {
     return GetAllPaginatedQB<Expense>(qb, query)
   }
 
+  
+    public async getAllOwnerExpenses(userId: string, query: PaginateQueryRaw): Promise<Paginated<Expense>> {
+    const qb = this.repository.createQueryBuilder('expense')
+      .leftJoinAndSelect('expense.apartment', 'apartment')
+      .leftJoinAndSelect('expense.car', 'car')
+      .leftJoinAndSelect('expense.owner', 'owner') 
+      .where('owner.id = :userId', { userId })
+
+  
+    if (query.search) {
+      qb.andWhere('expense.date = :date', { date: query.search })
+      qb.orWhere(`LOWER(expense.description) ILIKE '%${query.search.toLocaleLowerCase()}%'`)
+    }
+  
+    return GetAllPaginatedQB<Expense>(qb, query)
+  }
+
+  public async getAllCarExpensesByOwner(userId: string, query: PaginateQueryRaw): Promise<Paginated<Expense>> {
+    const qb = this.repository.createQueryBuilder('expense')
+      .leftJoinAndSelect('expense.car', 'car') 
+      .leftJoinAndSelect('expense.owner', 'owner')
+      .where('owner.id = :userId', { userId })
+
+  
+    if (query.search) {
+      qb.andWhere('expense.date = :date', { date: query.search })
+      qb.orWhere(`LOWER(expense.description) ILIKE '%${query.search.toLocaleLowerCase()}%'`)
+    }
+  
+    return GetAllPaginatedQB<Expense>(qb, query)
+  }
+
+  public async getAllApartmentExpensesByOwner(userId: string, query: PaginateQueryRaw): Promise<Paginated<Expense>> {
+    const qb = this.repository.createQueryBuilder('expense')
+      .leftJoinAndSelect('expense.apartment', 'apartment') 
+      .leftJoinAndSelect('expense.owner', 'owner')
+      .where('owner.id = :userId', { userId })
+
+  
+    if (query.search) {
+      qb.andWhere('expense.date = :date', { date: query.search })
+      qb.orWhere(`LOWER(expense.description) ILIKE '%${query.search.toLocaleLowerCase()}%'`)
+    }
+  
+    return GetAllPaginatedQB<Expense>(qb, query)
+  }
+
   public async getById(id: string, options: FindOptionsWhere<Expense>): Promise<Expense> {
     const obj = await this.repository.findOne(({
       where: { id },
@@ -125,12 +182,13 @@ export class ExpenseService {
     return expenses
   }
 
-  public async getExpensesByMonthforApartment(apartmentId: string, year: number, month: number): Promise<Expense[]> {
+  public async getExpensesByMonthforApartment(userId: string, apartmentId: string, year: number, month: number): Promise<Expense[]> {
     const startDate = new Date(year, month - 1, 1)
     const endDate = new Date(year, month, 0, 23, 59, 59, 999)
 
     const expenses = await this.repository.find({
       where: {
+        owner: { id: userId },
         apartment: { id: apartmentId },
         date: Between(startDate, endDate),
       },
@@ -139,12 +197,13 @@ export class ExpenseService {
     return expenses
   }
 
-  public async getExpensesByMonthforCar(carId: string, year: number, month: number): Promise<Expense[]> {
+  public async getExpensesByMonthforCar(userId: string, carId: string, year: number, month: number): Promise<Expense[]> {
     const startDate = new Date(year, month - 1, 1)
     const endDate = new Date(year, month, 0, 23, 59, 59, 999)
 
     const expenses = await this.repository.find({
       where: {
+        owner: { id: userId },
         car: { id: carId },
         date: Between(startDate, endDate),
       },
@@ -169,7 +228,7 @@ export class ExpenseService {
       .getMany()
   }
 
-  async getPreviousMonthApartmentExpenses(apartmentId: string): Promise<Expense[]> {
+  async getPreviousMonthApartmentExpenses(userId: string, apartmentId: string): Promise<Expense[]> {
     const currentDate = new Date()
     let currentYear = currentDate.getFullYear()
     let currentMonth = currentDate.getMonth() + 1
@@ -183,6 +242,7 @@ export class ExpenseService {
 
     const previousExpenses = await this.repository.find({
       where: {
+        owner: { id: userId },
         apartment: { id: apartmentId },
         date: Between(startOfPreviousMonth, endOfPreviousMonth),
       },

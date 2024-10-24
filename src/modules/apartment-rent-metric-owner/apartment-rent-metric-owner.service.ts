@@ -40,118 +40,155 @@ export class ApartmentRentMetricOwnerService {
     private readonly expenseRepository: Repository<Expense>
   ) { }
 
-  public async getTotalRevenueByYear(year: number): Promise<number> {
+  public async getTotalRevenueByYear(userId: string, year: number): Promise<number> {
     const startDate = new Date(`${year}-01-01`)
     const endDate = new Date(`${year + 1}-01-01`)
 
     const rents = await this.apartmentRentRepository.find({
       where: {
         startedAt: Between(startDate, endDate),
+        apartment: {
+          owner: { id: userId }, // Filter by user's apartments
+        }
       },
+      relations: ['apartment'],
     })
 
     const totalRevenue = rents.reduce((sum, rent) => sum + rent.cost, 0)
     return totalRevenue
   }
 
-  public async getTotalRevenueByQuarter(year: number, quarter: number): Promise<number> {
+  public async getTotalRevenueByQuarter(userId: string, year: number, quarter: number): Promise<number> {
     const startDate = new Date(`${year}-${(quarter - 1) * 3 + 1}-01`)
     const endDate = new Date(`${year}-${quarter * 3 + 1}-01`)
 
     const rents = await this.apartmentRentRepository.find({
       where: {
         startedAt: Between(startDate, endDate),
+        apartment: {
+          owner: { id: userId },
+        }
       },
+      relations: ['apartment'],
     })
 
     const totalRevenue = rents.reduce((sum, rent) => sum + rent.cost, 0)
     return totalRevenue
   }
 
-  public async getTotalRevenueByMonth(year: number, month: number): Promise<number> {
+  public async getTotalRevenueByMonth(userId: string, year: number, month: number): Promise<number> {
     const startDate = new Date(year, month - 1, 1)
     const endDate = new Date(year, month, 1)
 
     const rents = await this.apartmentRentRepository.find({
       where: {
         startedAt: Between(startDate, endDate),
+        apartment: {
+          owner: { id: userId },
+        }
       },
+      relations: ['apartment'],
     })
 
     const totalRevenue = rents.reduce((sum, rent) => sum + rent.cost, 0)
     return totalRevenue
   }
 
-  public async getTotalRevenueByWeek(year: number, week: number): Promise<number> {
+  public async getTotalRevenueByWeek(userId: string, year: number, week: number): Promise<number> {
     const startDate = getStartDateOfWeek(year, week)
     const endDate = getEndDateOfWeek(year, week)
 
     const rents = await this.apartmentRentRepository.find({
       where: {
         startedAt: Between(startDate, endDate),
+        apartment: {
+          owner: { id: userId },
+        }
       },
+      relations: ['apartment'],
     })
 
     const totalRevenue = rents.reduce((sum, rent) => sum + rent.cost, 0)
     return totalRevenue
   }
 
-  async getTotalRentsByMonth(year: number, month: number): Promise<number> {
+  async getTotalRentsByMonth(userId: string, year: number, month: number): Promise<number> {
     const startDate = new Date(year, month - 1, 1)
     const endDate = new Date(year, month, 1)
 
     const totalRents = await this.apartmentRentRepository.count({
       where: {
         startedAt: Between(startDate, endDate),
+        apartment: {
+          owner: { id: userId },
+        }
       },
+      relations: ['apartment'],
     })
 
     return totalRents
   }
 
-  async getTotalRentsByWeek(year: number, week: number): Promise<number> {
+  async getTotalRentsByWeek(userId: string, year: number, week: number): Promise<number> {
     const startDate = getStartDateOfWeek(year, week)
     const endDate = getEndDateOfWeek(year, week)
 
     const totalRents = await this.apartmentRentRepository.count({
       where: {
         startedAt: Between(startDate, endDate),
+        apartment: {
+          owner: { id: userId },
+        }
       },
+      relations: ['apartment'],
+
     })
 
     return totalRents
   }
 
-  public async getApartmentOccupancyRate(): Promise<number> {
-    const totalApartments = await this.apartmentRepository.count()
+  public async getApartmentOccupancyRate(userId: string): Promise<number> {
+    const totalApartments = await this.apartmentRepository.count({
+      where: { owner: { id: userId } }, // Filter by user's apartments
+    });
+  
     const activeRents = await this.apartmentRentRepository.find({
       where: {
         startedAt: LessThanOrEqual(new Date()),
-        endedAt: MoreThanOrEqual(new Date())
-      }
-    })
-    const rentedApartments = activeRents.length
-
-    const apartmentOccupancyRate = (rentedApartments / totalApartments) * 100
-
-    return Number(apartmentOccupancyRate.toFixed(1))
+        endedAt: MoreThanOrEqual(new Date()),
+        apartment: {
+          owner: { id: userId }, // Filter by user's apartments
+        },
+      },
+      relations: ['apartment'],
+    });
+  
+    const rentedApartments = activeRents.length;
+    const apartmentOccupancyRate = (rentedApartments / totalApartments) * 100;
+  
+    return Number(apartmentOccupancyRate.toFixed(1));
   }
 
-  async getMonthlyApartmentOccupancyRate(year: number, month: number): Promise<number> {
-    const startDate = new Date(year, month - 1, 1)
-    const endDate = new Date(year, month, 1)
-
+  public async getMonthlyApartmentOccupancyRate(userId: string, year: number, month: number): Promise<number> {
+    const startDate = new Date(year, month - 1, 1);
+    const endDate = new Date(year, month, 1);
+  
     const rentedApartments = await this.apartmentRentRepository.count({
       where: {
         startedAt: Between(startDate, endDate),
+        apartment: {
+          owner: { id: userId }, // Filter by user's apartments
+        },
       },
-    })
-
-    const totalApartments = await this.apartmentRepository.count()
-
-    const apartmentOccupancyRate = (rentedApartments / totalApartments) * 100
-
-    return Number(apartmentOccupancyRate.toFixed(1))
+      relations: ['apartment'],
+    });
+  
+    const totalApartments = await this.apartmentRepository.count({
+      where: { owner: { id: userId } }, // Filter by user's apartments
+    });
+  
+    const apartmentOccupancyRate = (rentedApartments / totalApartments) * 100;
+    return Number(apartmentOccupancyRate.toFixed(1));
   }
 
   public async getAverageDurationOfRentalsByMonth(year: number, month: number): Promise<number> {
@@ -183,27 +220,6 @@ export class ApartmentRentMetricOwnerService {
     return Number(averageDurationInDays.toFixed(1));
   }
 
-  /*
-  public async getPercentageOfApartmentsRentedByGender(): Promise<GenderPercentage[]> {
-    const apartmentCountsByGender = await this.apartmentRentRepository
-      .createQueryBuilder('apartmentRent')
-      .select('client.gender AS gender')
-      .addSelect('COUNT(*) AS count')
-      .innerJoin('apartmentRent.client', 'client')
-      .where('client.gender IS NOT NULL')
-      .groupBy('client.gender')
-      .getRawMany()
-
-    const totalRentals = apartmentCountsByGender.reduce((sum, entry) => sum + entry.count, 0)
-
-    const percentages = apartmentCountsByGender.map(entry => ({
-      gender: entry.gender,
-      percentage: parseFloat(((entry.count / totalRentals) * 100).toFixed(1)),
-    }))
-
-    return percentages
-  }
-*/
   public async getPopularRentalMonths(year: number, limit: number): Promise<RentalMonthFrequency[]> {
     const startDate = new Date(year, 0, 1)
     const endDate = new Date(year + 1, 0, 1)
@@ -221,13 +237,14 @@ export class ApartmentRentMetricOwnerService {
 
     return sortedMonths.slice(0, limit).map(([month, frequency]) => ({ month, frequency }))
   }
-  public async getTopRentedApartments(): Promise<TopRentedApartment[]> {
+  public async getTopRentedApartments(userId: string): Promise<TopRentedApartment[]> {
     const apartmentRentCounts = await this.apartmentRentRepository
       .createQueryBuilder('apartmentRent')
       .select('apartmentRent.apartment.id', 'apartmentId')
       .addSelect('apartment.fullAddress', 'address')
       .addSelect('COUNT(*)', 'count')
       .innerJoin('apartmentRent.apartment', 'apartment')
+      .where('apartment.owner.id = :userId', { userId }) 
       .groupBy('apartmentRent.apartment.id')
       .addGroupBy('apartment.fullAddress')
       .orderBy('count', 'DESC')

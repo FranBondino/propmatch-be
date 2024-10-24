@@ -8,6 +8,7 @@ import { BaseModel } from '../base-model.entity'
 import { Apartment } from './apartment.entity'
 import { ExpenseType } from '../../types/types'
 import { Car } from './car.entity'
+import { User } from '../user.entity'
 
 @Entity()
 export class Expense extends BaseModel {
@@ -19,6 +20,9 @@ export class Expense extends BaseModel {
 
   @Column()
   cost: number
+
+  @ManyToOne(() => User, (user) => user.expenses)
+  owner: Relation<User>
 
   @ManyToOne(() => Apartment, {nullable: true})
   apartment: Relation<Apartment>
