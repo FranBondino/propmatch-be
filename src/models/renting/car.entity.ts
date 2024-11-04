@@ -30,9 +30,6 @@ export class Car extends BaseModel {
   @ManyToOne(() => User, (user) => user.cars)
   owner: Relation<User>
 
-  @OneToMany(() => Expense, (expense) => expense.car, { nullable: true })
-  expenses: Expense[]
-
   @OneToMany(() => Appointment, appointment => appointment.car, { nullable: true })
   appointments: Appointment[]
 }

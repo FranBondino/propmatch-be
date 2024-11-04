@@ -9,6 +9,7 @@ import {
   Post,
   Put,
   Query,
+  Req,
   UseGuards,
   UseInterceptors
 } from '@nestjs/common'
@@ -22,6 +23,9 @@ import { CreateExpenseDto, UpdateExpenseDto } from './expense.dto'
 import { ExpenseService } from './expense.service'
 import { ResponseInterceptor } from '../../helpers/response.interceptor'
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger'
+import { User } from '../../models/user.entity'
+import { Request } from 'express';
+
 
 const { admin } = UserType
 
@@ -41,38 +45,21 @@ export class ExpenseController {
     return this.service.getAll(query)
   }
 
-  @Get('apartment')
-  public async getAllApartmentExpenses(@Query() query: PaginateQueryRaw): Promise<Paginated<Expense>> {
-    return this.service.getAllApartmentExpenses(query)
-  }
-
-  @Get('car')
-  public async getAllCarExpenses(@Query() query: PaginateQueryRaw): Promise<Paginated<Expense>> {
-    return this.service.getAllCarExpenses(query)
-  }
-
-
   @Post()
-  public async create(@Body() dto: CreateExpenseDto): Promise<Expense> {
-    return this.service.create(dto)
+  public async create(@Body() dto: CreateExpenseDto, @Req() req: Request): Promise<Expense> {
+    const user = req.user as User
+    return this.service.create(dto, user.id)
   }
 
   @Get('apartment/:apartmentId/:year/:month')
   async getApartmentExpensesByMonth(
+    @Req() req: Request,
     @Param('apartmentId') apartmentId: string,
     @Param('year', ParseIntPipe) year: number,
     @Param('month', ParseIntPipe) month: number,
   ) {
-    return this.service.getExpensesByMonthforApartment(apartmentId, year, month)
-  }
-
-  @Get('car/:carId/:year/:month')
-  async getExpensesByMonthforCar(
-    @Param('carId') carId: string,
-    @Param('year', ParseIntPipe) year: number,
-    @Param('month', ParseIntPipe) month: number,
-  ) {
-    return this.service.getExpensesByMonthforCar(carId, year, month)
+    const user = req.user as User
+    return this.service.getExpensesByMonthforApartment(user.id, apartmentId, year, month)
   }
 
   @Get('/:id')

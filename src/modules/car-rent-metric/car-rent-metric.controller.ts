@@ -130,9 +130,10 @@ export class CarRentMetricController {
   public async getMostExpensiveExpenses(@Param('limit') limit: number): Promise<Expense[]> {
     return this.service.getMostExpensiveExpenses(limit)
   }
-
+/*
   @Get('expense-cost-augment-rate')
   public async getExpenseCostAugmentRate(): Promise<MonthlyCarExpenseCostAugmentRate[]> {
     return this.service.getExpenseCostAugmentRate()
   }
+  */
 }

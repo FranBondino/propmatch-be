@@ -25,6 +25,7 @@ import { Request } from 'express'
 import { User } from '../../models/user.entity'
 import { JwtAuthGuard } from '../security/auth/auth.guard'
 import { AllowedUsersGuard } from '../security/authorization/allowed-user-type.guard'
+import { getOptionsFromJSON } from '../../helpers/validation.helper'
 
 const { admin, owner, user } = UserType
 
@@ -42,17 +43,19 @@ export class ApartmentController {
     return this.service.create(dto, user.id)
   }
 
+  //MODOFY METHOD
+
+  @Get('/:id')
+  public async get(@Param() { id }: IdRequired, @Query() queryOptions: any): Promise<Apartment> {
+    const options = getOptionsFromJSON(queryOptions)
+    return this.service.getById(id, options)
+  }
+
   @Get()
-  public async getAll(
-    @Query('id') id: string,
-    @Query() query: PaginateQueryRaw
-  ): Promise<Paginated<Apartment> | Apartment> {
-    if (id) {
-      return this.service.getById(id, null); // Fetch a single apartment by ID
-    } else {
+  public async getAll(@Query() query: PaginateQueryRaw): Promise<Paginated<Apartment>> {
       return this.service.getAll(query); // Fetch all apartments
     }
-  }
+  
   /*
   @Get(':id/owner')
     public async getOwnerByApartment(@Param('id') apartmentId: string): Promise<User> {

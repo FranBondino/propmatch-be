@@ -293,7 +293,7 @@ export class CarRentMetricService {
 
     return expenses
   }
-
+/*
   public async getExpenseCostAugmentRate(): Promise<MonthlyCarExpenseCostAugmentRate[]> {
     const expenses = await this.expenseRepository.find({
       order: {
@@ -336,4 +336,5 @@ export class CarRentMetricService {
     }
     return augmentRates
   }
+    */
 }

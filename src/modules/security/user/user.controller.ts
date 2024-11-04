@@ -65,6 +65,36 @@ export class UserController {
     return user
   }
 
+  @Post('/contacts/:userId/:contactId')
+  @UseGuards(JwtAuthGuard)
+  public async addContact(
+    @Param('contactId') contactId: string,
+    @Req() req: Request
+  ): Promise<User[]> {
+    const user = req.user as User;
+
+    // Log adding contact action
+    this.logger.log(`User ${user.id} is adding contact ${contactId}`);
+
+    // Call service to add contact
+    return this.service.addContact(user.id, contactId);
+  }
+
+  @Delete('/contacts/:userId/:contactId')
+  @UseGuards(JwtAuthGuard)
+  public async deleteContact(
+    @Param('contactId') contactId: string,
+    @Req() req: Request
+  ): Promise<void> {
+    const user = req.user as User;
+
+    // Log deleting contact action
+    this.logger.log(`User ${user.id} is deleting contact ${contactId}`);
+
+    // Call service to delete contact
+    await this.service.deleteContact(user.id, contactId);
+  }
+
   @Put()
   public async update(@Body() dto: UpdateUserDto, @Req() req: Request): Promise<void> {
     if (dto.email) await this.service.isEmailFree(dto.email, dto.id)

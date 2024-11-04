@@ -52,6 +52,12 @@ export class ApartmentService {
     return GetAllPaginatedQB<Apartment>(qb, query)
   }
 
+  public async findByOwnerId(ownerId: string): Promise<Apartment[]> {
+    return this.repository.find({
+      where: { owner: { id: ownerId } },
+    });
+  }
+
   public async findAll(): Promise<Apartment[]> {
     return this.repository.find()
   }

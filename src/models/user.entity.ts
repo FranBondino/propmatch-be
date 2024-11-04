@@ -3,6 +3,8 @@ import { UserPreferences, UserType, UserTypes } from '../types/types'
 import {
   Column,
   Entity,
+  JoinTable,
+  ManyToMany,
   OneToMany,
 } from 'typeorm'
 import { BaseModel } from './base-model.entity'
@@ -45,12 +47,16 @@ export class User extends BaseModel {
   @OneToMany(() => Expense, (expense) => expense.owner, { nullable: true })
   expenses: Expense[];
 
-
   @OneToMany(() => Appointment, appointment => appointment.user, { nullable: true })
   appointments: Appointment[];
 
   @OneToMany(() => Appointment, appointment => appointment.owner, { nullable: true })
   ownedAppointments: Appointment[];
+
+  // Self-referencing many-to-many relationship for contacts
+  @ManyToMany(() => User, (user) => user.contacts, { nullable: true })
+  @JoinTable()
+  contacts: User[];
 
   @Column('json', { nullable: true })
   preferences: UserPreferences

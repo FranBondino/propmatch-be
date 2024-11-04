@@ -21,17 +21,9 @@ export class CreateExpenseDto {
   @IsNotEmpty()
   description: string
 
-  @IsString()
-  @IsNotEmpty()
-  type: ExpenseType
-
   @IsOptional()
   @IsUUID()
   apartmentId: string
-
-  @IsOptional()
-  @IsUUID()
-  carId: string
 }
 
 export class UpdateExpenseDto {

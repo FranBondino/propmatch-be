@@ -73,12 +73,18 @@ export class UserPreferencesDto {
   maxBudget?: number;
 
   @IsOptional()
-  @Transform(({ value }) => value === 'true' || value === true)  // Transform "true"/"false" strings to boolean
+  @Transform(({ value }) => 
+    value === 'true' || value === true || value === 'Yes' ? true : 
+    value === 'false' || value === false || value === 'No' ? false : value
+  )  // Handle "Yes" and "No" as booleans
   @IsBoolean()
   smoking?: boolean;
 
   @IsOptional()
-  @Transform(({ value }) => value === 'true' || value === true)  // Transform "true"/"false" strings to boolean
+  @Transform(({ value }) => 
+    value === 'true' || value === true || value === 'Yes' ? true : 
+    value === 'false' || value === false || value === 'No' ? false : value
+  )  // Handle "Yes" and "No" as booleans
   @IsBoolean()
   pets?: boolean;
 

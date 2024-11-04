@@ -4,12 +4,13 @@ import { ExpenseJobService } from './expense-job.service'
 import { ApartmentModule } from '../apartment/apartment.module'
 import { ExpenseModule } from '../expense/expense.module'
 import { CarModule } from '../car/car.module'
+import { SecurityModule } from '../security/security.module'
 
 @Module({
   imports: [
     ApartmentModule,
-    CarModule,
     ExpenseModule,
+    SecurityModule,
     ScheduleModule.forRoot(),
   ],
   providers: [

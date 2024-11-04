@@ -6,19 +6,17 @@ import { SecurityModule } from '../security/security.module'
 import { ApartmentModule } from '../apartment/apartment.module'
 import { Expense } from '../../models/renting/expense.entity'
 import { Apartment } from '../../models/renting/apartment.entity'
-import { Car } from '../../models/renting/car.entity'
-import { CarModule } from '../car/car.module'
+import { User } from '../../models/user.entity'
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([
       Expense,
       Apartment,
-      Car
+      User,
     ]),
     SecurityModule,
     ApartmentModule,
-    CarModule
   ],
   providers: [
     ExpenseService,
