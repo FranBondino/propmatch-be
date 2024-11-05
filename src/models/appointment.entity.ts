@@ -23,9 +23,6 @@ export class Appointment extends BaseModel {
   @ManyToOne(() => Apartment, { nullable: true })
   apartment: Relation<Apartment>
 
-  @ManyToOne(() => Car, { nullable: true })
-  car: Relation<Car>
-
   @ManyToOne(() => User, { nullable: true })
   user: Relation<User>
 

@@ -29,7 +29,6 @@ export class AppointmentService {
   public async getAllAppointments(query: PaginateQueryRaw): Promise<Paginated<Appointment>> {
     const qb = this.repository.createQueryBuilder('appointment')
       .leftJoinAndSelect('appointment.user', 'user')
-      .leftJoinAndSelect('appointment.car', 'car')
       .leftJoinAndSelect('appointment.apartment', 'apartment');
 
     if (query.search) {
@@ -37,19 +36,16 @@ export class AppointmentService {
         new Brackets(qb => {
           qb.where('appointment.date = :date', { date: query.search })
             .orWhere('LOWER(user.name) ILIKE :search', { search: `%${query.search.toLowerCase()}%` })
-            .orWhere('LOWER(car.name) ILIKE :search', { search: `%${query.search.toLowerCase()}%` })
             .orWhere('LOWER(apartment.name) ILIKE :search', { search: `%${query.search.toLowerCase()}%` });
         })
       );
     }
-
     return GetAllPaginatedQB<Appointment>(qb, query);
   }
 
   public async getAppointmentsByUser(userId: string, query: PaginateQueryRaw): Promise<Paginated<Appointment>> {
     const qb = this.repository.createQueryBuilder('appointment')
       .leftJoinAndSelect('appointment.user', 'user')
-      .leftJoinAndSelect('appointment.car', 'car')
       .leftJoinAndSelect('appointment.apartment', 'apartment')
       .where('appointment.user.id = :userId', { userId });
 
@@ -59,7 +55,6 @@ export class AppointmentService {
   public async getAppointmentsByOwner(ownerId: string, query: PaginateQueryRaw): Promise<Paginated<Appointment>> {
     const qb = this.repository.createQueryBuilder('appointment')
       .leftJoinAndSelect('appointment.owner', 'owner')
-      .leftJoinAndSelect('appointment.car', 'car')
       .leftJoinAndSelect('appointment.apartment', 'apartment')
       .where('appointment.owner.id = :ownerId', { ownerId });
 
@@ -70,7 +65,7 @@ export class AppointmentService {
   public async getAppointmentById(id: string, options: FindOptionsWhere<Appointment>): Promise<Appointment> {
     const appointment = await this.repository.findOne({
       where: { id },
-      relations: ['user', 'car', 'apartment'],
+      relations: ['user', 'apartment'],
       ...options,
     });
     if (!appointment) {
@@ -158,23 +153,23 @@ export class AppointmentService {
 
 
   public async createAppointment(dto: CreateAppointmentDto, userId: string): Promise<Appointment> {
-    const { user, owner, car, apartment } = await this.prepareAppointmentEntities(dto, userId);
+    const { user, owner, apartment } = await this.prepareAppointmentEntities(dto, userId);
 
     await this.validateAppointment(dto, owner.id);
 
-    const appointment = this.createAppointmentEntity(dto, user, owner, car, apartment);
+    const appointment = this.createAppointmentEntity(dto, user, owner, apartment);
 
-    await this.sendAppointmentNotifications(user, owner, car, apartment);
+    await this.sendAppointmentNotifications(user, owner, apartment);
 
     return this.repository.save(appointment);
   }
 
-  private async prepareAppointmentEntities(dto: CreateAppointmentDto, userId: string): Promise<{ user: User, owner: User, car?: Car, apartment?: Apartment }> {
+  private async prepareAppointmentEntities(dto: CreateAppointmentDto, userId: string): Promise<{ user: User, owner: User, apartment?: Apartment }> {
     const user = await this.findUserById(userId);
     const owner = await this.findOwnerById(dto.ownerId);
     const { car: foundCar, apartment: foundApartment } = await this.findAssociatedEntities(dto, owner.id);
 
-    return { user, owner, car: foundCar, apartment: foundApartment };
+    return { user, owner, apartment: foundApartment };
   }
 
   private async validateAppointment(dto: CreateAppointmentDto, ownerId: string): Promise<void> {
@@ -202,14 +197,9 @@ export class AppointmentService {
       if (!apartment) throw new NotFoundException('Apartment not found or does not belong to this owner');
     }
 
-    if (dto.carId) {
-      car = await this.carRepository.findOne({ where: { id: dto.carId, owner: { id: ownerId } } });
-      if (!car) throw new NotFoundException('Car not found or does not belong to this owner');
-    }
+    if (!apartment) throw new BadRequestException('Either apartmentId or carId must be provided');
 
-    if (!apartment && !car) throw new BadRequestException('Either apartmentId or carId must be provided');
-
-    return { car, apartment };
+    return { apartment };
   }
 
   private async ensureNoOverlappingAppointments(dto: CreateAppointmentDto, ownerId: string): Promise<void> {
@@ -236,13 +226,11 @@ export class AppointmentService {
     dto: CreateAppointmentDto,
     user: User,
     owner: User,
-    car?: Car,
     apartment?: Apartment
   ): Appointment {
     return this.repository.create({
       ...dto,
       user,
-      car,
       apartment,
       owner, // Associate the owner, who is a User
       status: 'pending',
@@ -254,26 +242,24 @@ export class AppointmentService {
   private async sendAppointmentNotifications(
     user: User,
     owner: User,
-    car?: Car,
     apartment?: Apartment
   ): Promise<void> {
     try {
       // Determine the type and details of the appointment
-      const appointmentType = car ? 'car' : 'apartment';
-      const appointmentDetails = car ? car.model : apartment?.fullAddress;
+      const appointmentDetails = apartment.fullAddress;
 
       // Email to the user who made the appointment
       await this.emailNotificationService.sendEmail(
         user.email,
         'Appointment Request Received',
-        `Your appointment request for the ${appointmentType} (${appointmentDetails}) has been received.`
+        `Your appointment request for the (${appointmentDetails}) has been received.`
       );
 
       // Email to the owner
       await this.emailNotificationService.sendEmail(
         owner.email,
         'New Appointment Request',
-        `A new appointment request has been made for your ${appointmentType} (${appointmentDetails}).`
+        `A new appointment request has been made for your (${appointmentDetails}).`
       );
     } catch (error) {
       console.error('Error sending email notifications:', error);
@@ -303,19 +289,18 @@ export class AppointmentService {
     await this.repository.save(appointment);
 
     // Notify the user and owner about the cancellation
-    await this.sendCancellationNotifications(appointment.user, appointment.owner, appointment.car, appointment.apartment);
+    await this.sendCancellationNotifications(appointment.user, appointment.owner, appointment.apartment);
   }
 
   private async sendCancellationNotifications(
     user: User,
     owner: User,
-    car?: Car,
     apartment?: Apartment
   ): Promise<void> {
     try {
       // Determine the type and details of the appointment
-      const appointmentType = car ? 'car' : 'apartment';
-      const appointmentDetails = car ? car.model : apartment?.fullAddress;
+      const appointmentType = 'apartment';
+      const appointmentDetails = apartment?.fullAddress;
 
       // Email to the user about the cancellation
       await this.emailNotificationService.sendEmail(

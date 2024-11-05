@@ -34,14 +34,14 @@ export class CarService {
     if (!user) throw new NotFoundException("user was not found")
     const car = this.repository.create({
       ...dto,
-    owner: user,
+      owner: user,
     })
     const savedCar = await this.repository.save(car)
 
     await this.carAuditService.logAction(
       savedCar.id,
       'Create',
-      { old: null, new: dto }, 
+      { old: null, new: dto },
       userId,
     )
 
@@ -69,11 +69,11 @@ export class CarService {
       .leftJoinAndSelect('car.owner', 'owner')
       .where('owner.id = :userId', { userId })
 
-      if (query.search) {
-        qb.andWhere(`LOWER(car.model) ILIKE '%${query.search.toLocaleLowerCase()}%'`)
-        qb.orWhere(`LOWER(car.make) ILIKE '%${query.search.toLocaleLowerCase()}%'`)
-        qb.orWhere(`LOWER(car.licensePlate) ILIKE '%${query.search.toLocaleLowerCase()}%'`)
-      }
+    if (query.search) {
+      qb.andWhere(`LOWER(car.model) ILIKE '%${query.search.toLocaleLowerCase()}%'`)
+      qb.orWhere(`LOWER(car.make) ILIKE '%${query.search.toLocaleLowerCase()}%'`)
+      qb.orWhere(`LOWER(car.licensePlate) ILIKE '%${query.search.toLocaleLowerCase()}%'`)
+    }
 
     return GetAllPaginatedQB<Car>(qb, query)
   }
@@ -104,30 +104,24 @@ export class CarService {
   }
 
   public async deleteById(id: string, userId: string): Promise<void> {
-    const car= await this.repository.findOne({
+    const car = await this.repository.findOne({
       where: { id },
     })
-  
+
     if (!car) {
       throw new NotFoundException(CAR_NOT_FOUND)
     }
-  
+
     const hasRents = await this.carRentRepository.findOne({
       where: { car: { id: car.id } },
     })
-  
+
     if (hasRents) {
       throw new ConflictException(CAR_HAS_RENTS)
     }
 
-    const hasAppointments = await this.appointmentRepository.findOne({
-      where: { car: { id: car.id } },
-    })
-
-    if (hasAppointments) throw new ConflictException("car has appointments")
-  
     const result = await this.repository.softDelete(id)
-  
+
     if (result.affected === 0) {
       throw new NotFoundException(CAR_NOT_FOUND)
     }

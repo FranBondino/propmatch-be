@@ -65,7 +65,7 @@ export class UserController {
     return user
   }
 
-  @Post('/contacts/:userId/:contactId')
+  @Post('/contacts/:contactId')
   @UseGuards(JwtAuthGuard)
   public async addContact(
     @Param('contactId') contactId: string,

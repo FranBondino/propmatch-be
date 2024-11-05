@@ -18,10 +18,6 @@ export class CreateAppointmentDto {
 
   @IsOptional()
   @IsUUID()
-  carId?: string;
-
-  @IsOptional()
-  @IsUUID()
   userId?: string;
 
   @IsOptional()
