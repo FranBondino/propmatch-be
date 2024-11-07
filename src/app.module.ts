@@ -16,9 +16,10 @@ import { ExpenseModule } from './modules/expense/expense.module'
 import { ClientModule } from './modules/client/client.module'
 import { User } from './models/user.entity'
 import { JobsModule } from './modules/jobs/jobs.module'
-import { CarAuditModule } from './modules/car-audit/car-audit.module'
+import { ApartmentAuditModule } from './modules/apartment-audit/apartment-audit.module'
 import { AppointmentModule } from './modules/appointment/appointment.module'
 import { EmailNotificationModule } from './modules/email-notification/email-notification.module'
+import { ApartmentRentMetricOwnerModule } from './modules/apartment-rent-metric-owner/apartment-rent-metric-owner.module'
 
 
 dotenv.config()
@@ -41,7 +42,8 @@ dotenv.config()
     ExpenseModule,
     ClientModule,
     JobsModule,
-    CarAuditModule,
+    ApartmentAuditModule,
+    ApartmentRentMetricOwnerModule,
     AppointmentModule,
     EmailNotificationModule
   ],

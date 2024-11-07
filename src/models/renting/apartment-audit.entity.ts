@@ -5,16 +5,16 @@ import {
   Relation,
 } from 'typeorm'
 import { BaseModel } from '../base-model.entity'
-import { Car } from './car.entity'
 import { User } from '../user.entity'
+import { Apartment } from './apartment.entity'
 
 @Entity()
-export class CarAudit extends BaseModel {
+export class ApartmentAudit extends BaseModel {
   @ManyToOne(() => User)
   user: Relation<User>
 
-  @ManyToOne(() => Car)  // Corrected to use ManyToOne decorator
-  car: Relation<Car>
+  @ManyToOne(() => Apartment)  // Corrected to use ManyToOne decorator
+  apartment: Relation<Apartment>
 
   @Column()
   action: string

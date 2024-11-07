@@ -7,7 +7,7 @@ import { CreateCarDto, UpdateCarDto } from './car.dto'
 import { errorsCatalogs } from '../../catalogs/errors-catalogs'
 import { InjectRepository } from '@nestjs/typeorm'
 import { CarRent } from '../../models/renting/car-rent.entity'
-import { CarAuditService } from '../car-audit/car-audit.service'
+import { CarAuditService } from '../apartment-audit/apartment-audit.service'
 import { User } from '../../models/user.entity'
 import { Appointment } from '../../models/appointment.entity'
 

@@ -43,6 +43,23 @@ export class ApartmentController {
     return this.service.create(dto, user.id)
   }
 
+  @Get('available')
+  public async getAvailableApartments(
+    @Query() query: PaginateQueryRaw
+  ): Promise<Paginated<Apartment>> {
+    return this.service.getAvailableApartments(query); // Fetch available apartments
+  }
+
+  @Get('owner')
+  public async getAllOwnerApartments(
+    @Req() req: Request,
+    @Query() query: PaginateQueryRaw
+  ): Promise<Paginated<Apartment>> {
+    console.log('User from request:', req.user); // Ensure req.user is correctly populated
+    const user = req.user as User
+    return this.service.getAllOwnerApartments(user.id, query);
+  }
+
   //MODOFY METHOD
 
   @Get('/:id')
@@ -68,15 +85,6 @@ export class ApartmentController {
       return owner;
     }
   */
-  @Get('owner')
-  public async getAllOwnerApartments(
-    @Req() req: Request,
-    @Query() query: PaginateQueryRaw
-  ): Promise<Paginated<Apartment>> {
-    console.log('User from request:', req.user); // Ensure req.user is correctly populated
-    const user = req.user as User
-    return this.service.getAllOwnerApartments(user.id, query);
-  }
 
   @Get(':id/owner')
   async getOwnerByApartmentId(@Param('id') apartmentId: string): Promise<User> {
@@ -85,14 +93,6 @@ export class ApartmentController {
     } catch (error) {
       throw new NotFoundException('Owner not found for this apartment');
     }
-  }
-
-
-  @Get('available')
-  public async getAvailableApartments(
-    @Query() query: PaginateQueryRaw
-  ): Promise<Paginated<Apartment>> {
-    return this.service.getAvailableApartments(query); // Fetch available apartments
   }
 
   @Put()
