@@ -5,7 +5,6 @@ import { CarController } from './car.controller'
 import { SecurityModule } from '../security/security.module'
 import { Car } from '../../models/renting/car.entity'
 import { CarRent } from '../../models/renting/car-rent.entity'
-import { CarAuditModule } from '../apartment-audit/apartment-audit.module'
 import { User } from '../../models/user.entity'
 import { Appointment } from '../../models/appointment.entity'
 
@@ -13,12 +12,11 @@ import { Appointment } from '../../models/appointment.entity'
   imports: [
     TypeOrmModule.forFeature([
       Car,
-      CarRent, 
+      CarRent,
       User,
       Appointment
     ]),
     SecurityModule,
-    CarAuditModule
   ],
   providers: [
     CarService,

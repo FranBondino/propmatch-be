@@ -70,9 +70,9 @@ export class ApartmentController {
 
   @Get()
   public async getAll(@Query() query: PaginateQueryRaw): Promise<Paginated<Apartment>> {
-      return this.service.getAll(query); // Fetch all apartments
-    }
-  
+    return this.service.getAll(query); // Fetch all apartments
+  }
+
   /*
   @Get(':id/owner')
     public async getOwnerByApartment(@Param('id') apartmentId: string): Promise<User> {
@@ -102,7 +102,8 @@ export class ApartmentController {
   }
 
   @Delete('/:id')
-  public async delete(@Param() { id }: IdRequired): Promise<void> {
-    return this.service.deleteById(id)
+  public async delete(@Param() { id }: IdRequired, @Req() req: Request): Promise<void> {
+    const user = req.user as User
+    return this.service.deleteById(id, user.id)
   }
 }

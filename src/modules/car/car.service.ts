@@ -7,7 +7,6 @@ import { CreateCarDto, UpdateCarDto } from './car.dto'
 import { errorsCatalogs } from '../../catalogs/errors-catalogs'
 import { InjectRepository } from '@nestjs/typeorm'
 import { CarRent } from '../../models/renting/car-rent.entity'
-import { CarAuditService } from '../apartment-audit/apartment-audit.service'
 import { User } from '../../models/user.entity'
 import { Appointment } from '../../models/appointment.entity'
 
@@ -24,7 +23,6 @@ export class CarService {
     private readonly userRepository: Repository<User>,
     @InjectRepository(Appointment)
     private readonly appointmentRepository: Repository<Appointment>,
-    private readonly carAuditService: CarAuditService,
   ) { }
 
   public async create(dto: CreateCarDto, userId: string): Promise<Car> {
@@ -37,13 +35,6 @@ export class CarService {
       owner: user,
     })
     const savedCar = await this.repository.save(car)
-
-    await this.carAuditService.logAction(
-      savedCar.id,
-      'Create',
-      { old: null, new: dto },
-      userId,
-    )
 
     return savedCar
   }
@@ -95,12 +86,6 @@ export class CarService {
 
     await this.repository.save(obj);
 
-    await this.carAuditService.logAction(
-      obj.id,
-      'Update',
-      { old: oldData, new: dto },
-      userId
-    );
   }
 
   public async deleteById(id: string, userId: string): Promise<void> {
@@ -126,12 +111,6 @@ export class CarService {
       throw new NotFoundException(CAR_NOT_FOUND)
     }
 
-    // Log the deletea ction
-    await this.carAuditService.logAction(
-      id,
-      'Delete',
-      { old: car, new: null },
-      userId
-    )
+
   }
 }

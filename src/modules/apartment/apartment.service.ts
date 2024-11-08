@@ -10,6 +10,7 @@ import { InjectRepository } from '@nestjs/typeorm'
 import { ApartmentRent } from '../../models/renting/apartment-rent.entity'
 import { User } from '../../models/user.entity'
 import { Appointment } from '../../models/appointment.entity'
+import { ApartmentAuditService } from '../apartment-audit/apartment-audit.service'
 
 const { APARTMENT_NOT_FOUND, APARTMENT_HAS_RENTS } = errorsCatalogs
 
@@ -24,6 +25,7 @@ export class ApartmentService {
     private readonly userRepository: Repository<User>,
     @InjectRepository(Appointment)
     private readonly appointmentRepository: Repository<Appointment>,
+    private readonly apartmentAuditService: ApartmentAuditService,
   ) { }
 
   public async create(dto: CreateApartmentDto, userId: string): Promise<Apartment> {
@@ -35,8 +37,16 @@ export class ApartmentService {
       ...dto,
       owner: user,
     })
+    const savedApartment = await this.repository.save(apartment)
 
-    return this.repository.save(apartment)
+    await this.apartmentAuditService.logAction(
+      savedApartment.id,
+      'Create',
+      { old: null, new: dto },
+      userId,
+    )
+
+    return savedApartment
   }
 
   public async getAllOwnerApartments(userId: string, query: PaginateQueryRaw): Promise<Paginated<Apartment>> {
@@ -134,13 +144,22 @@ export class ApartmentService {
     if (!apartment) throw new NotFoundException('Apartment not found')
     if (apartment.owner.id !== userId) throw new ForbiddenException('You are not allowed to update this apartment')
 
+    const oldData = { ...apartment }
     // Merge the updates and save the apartment
     Object.assign(apartment, dto)
+
     await this.repository.save(apartment)
+
+    await this.apartmentAuditService.logAction(
+      apartment.id,
+      'Update',
+      { old: oldData, new: dto },
+      userId
+    )
   }
 
 
-  public async deleteById(id: string): Promise<void> {
+  public async deleteById(id: string, userId: string): Promise<void> {
     const apartment = await this.repository.findOne({
       where: { id },
     })
@@ -168,6 +187,13 @@ export class ApartmentService {
     if (result.affected === 0) {
       throw new NotFoundException(APARTMENT_NOT_FOUND)
     }
+
+    await this.apartmentAuditService.logAction(
+      id,
+      'Delete',
+      { old: apartment, new: null },
+      userId
+    )
   }
 
 }

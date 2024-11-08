@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Param,
+  Req,
   UseGuards,
   UseInterceptors
 } from '@nestjs/common'
@@ -21,6 +22,8 @@ import { ResponseInterceptor } from '../../helpers/response.interceptor'
 import { Expense } from '../../models/renting/expense.entity'
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger'
 import { ApartmentRentMetricOwnerService } from './apartment-rent-metric-owner.service'
+import { User } from '../../models/user.entity'
+import { Request } from 'express'
 
 const { admin } = UserType
 
@@ -36,61 +39,75 @@ export class ApartmentRentMetricOwnerController {
   ) { }
 
   @Get('year/:year')
-  public async getTotalRevenueByYear(@Param('year') year: number): Promise<number> {
-    return this.service.getTotalRevenueByYear(year)
+  public async getTotalRevenueByYear(@Req() req: Request, @Param('year') year: number): Promise<number> {
+    const user = req.user as User
+    return this.service.getTotalRevenueByYear(user.id, year)
   }
 
   @Get('quarter/:year/:quarter')
   public async getTotalRevenueByQuarter(
+    @Req() req: Request,
     @Param('year') year: number,
     @Param('quarter') quarter: number,
   ): Promise<number> {
-    return this.service.getTotalRevenueByQuarter(year, quarter)
+    const user = req.user as User
+    return this.service.getTotalRevenueByQuarter(user.id, year, quarter)
   }
 
   @Get('month/:year/:month')
   public async getTotalRevenueByMonth(
+    @Req() req: Request,
     @Param('year') year: number,
     @Param('month') month: number,
   ): Promise<number> {
-    return this.service.getTotalRevenueByMonth(year, month)
+    const user = req.user as User
+    return this.service.getTotalRevenueByMonth(user.id, year, month)
   }
 
   @Get('week/:year/:week')
   public async getTotalRevenueByWeek(
+    @Req() req: Request,
     @Param('year') year: number,
     @Param('week') week: number,
   ): Promise<number> {
-    return this.service.getTotalRevenueByWeek(year, week)
+    const user = req.user as User
+    return this.service.getTotalRevenueByWeek(user.id, year, week)
   }
 
   @Get(':year/month/:month/rents')
   public async getTotalRentsByMonth(
+    @Req() req: Request,
     @Param('year') year: number,
     @Param('month') month: number,
   ): Promise<number> {
-    return this.service.getTotalRentsByMonth(year, month)
+    const user = req.user as User
+    return this.service.getTotalRentsByMonth(user.id, year, month)
   }
 
   @Get(':year/week/:week/rents')
   public async getTotalRentsByWeek(
+    @Req() req: Request,
     @Param('year') year: number,
     @Param('week') week: number,
   ): Promise<number> {
-    return this.service.getTotalRentsByWeek(year, week)
+    const user = req.user as User
+    return this.service.getTotalRentsByWeek(user.id, year, week)
   }
 
   @Get('apartment-occupancy-rate')
-  public async getApartmentOccupancyRate(): Promise<number> {
-    return this.service.getApartmentOccupancyRate()
+  public async getApartmentOccupancyRate(@Req() req: Request): Promise<number> {
+    const user = req.user as User
+    return this.service.getApartmentOccupancyRate(user.id)
   }
 
   @Get(':year/month/:month/apartment-occupancy-rate')
   public async getMonthlyApartmentOccupancyRate(
+    @Req() req: Request,
     @Param('year') year: number,
     @Param('month') month: number,
   ): Promise<number> {
-    return this.service.getMonthlyApartmentOccupancyRate(year, month)
+    const user = req.user as User
+    return this.service.getMonthlyApartmentOccupancyRate(user.id, year, month)
   }
 
   @Get('average-duration-of-rentals/:month/:year')
@@ -110,8 +127,9 @@ export class ApartmentRentMetricOwnerController {
   }
 
   @Get('top-rented-apartments')
-  public async getTopRentedApartments(): Promise<TopRentedApartment[]> {
-    return this.service.getTopRentedApartments()
+  public async getTopRentedApartments(@Req() req: Request): Promise<TopRentedApartment[]> {
+    const user = req.user as User
+    return this.service.getTopRentedApartments(user.id)
   }
 
   @Get('top-rented-apartments/:month/:year')

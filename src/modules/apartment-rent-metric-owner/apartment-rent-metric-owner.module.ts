@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common'
 import { TypeOrmModule } from '@nestjs/typeorm'
-import { ApartmentRentMetricService } from './apartment-rent-metric.service'
 import { SecurityModule } from '../security/security.module'
 import { ApartmentModule } from '../apartment/apartment.module'
 import { ClientModule } from '../client/client.module'
@@ -10,7 +9,7 @@ import { Expense } from '../../models/renting/expense.entity'
 import { Apartment } from '../../models/renting/apartment.entity'
 import { ApartmentRent } from '../../models/renting/apartment-rent.entity'
 import { Client } from '../../models/renting/client.entity'
-import { ApartmentRentMetricOwnerController } from './apartment-rent-metric.controller'
+import { ApartmentRentMetricOwnerController } from './apartment-rent-metric-owner-controller'
 import { ApartmentRentMetricOwnerService } from './apartment-rent-metric-owner.service'
 
 @Module({
