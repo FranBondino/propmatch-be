@@ -9,6 +9,7 @@ import { User } from '../../models/user.entity'
 import { Appointment } from '../../models/appointment.entity'
 import { ApartmentAuditModule } from '../apartment-audit/apartment-audit.module'
 import { ApartmentAuditService } from '../apartment-audit/apartment-audit.service'
+import { ApartmentAudit } from '../../models/renting/apartment-audit.entity'
 
 @Module({
   imports: [
@@ -16,7 +17,8 @@ import { ApartmentAuditService } from '../apartment-audit/apartment-audit.servic
       Apartment,
       ApartmentRent,
       User,
-      Appointment
+      Appointment,
+      ApartmentAudit
     ]),
     SecurityModule,
     ApartmentAuditModule,
