@@ -103,6 +103,14 @@ export class UserController {
     await this.logService.create(logUpdateUser(req.user, obj.id))
   }
 
+  @Get('/current')
+  public async getCurrentUser(@Req() req: Request, @Query() queryOptions: any): Promise<UserResponseDto> {
+    const options = getOptionsFromJSON(queryOptions)
+    const user = req.user as User;
+
+    return this.service.getById(user.id, options)
+  }
+
   @Get('/:id')
   public async get(@Param() { id }: IdRequired, @Query() queryOptions: any): Promise<UserResponseDto> {
     const options = getOptionsFromJSON(queryOptions)
