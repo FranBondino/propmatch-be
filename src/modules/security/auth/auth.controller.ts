@@ -33,6 +33,13 @@ export class AuthController {
     return this.service.login(dto)
   }
 
+  @Put('/logout')
+  @UseGuards(JwtAuthGuard)
+  public async logout(@Req() req: Request): Promise<void> {
+    const user = req.user as User
+    await this.service.logout(user.id)
+  }
+
   @Put('/profile/update-password')
   @AllowedUsers(UserType.admin)
   @UseGuards(JwtAuthGuard, AllowedUsersGuard)

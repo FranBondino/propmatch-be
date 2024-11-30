@@ -180,7 +180,7 @@ export class ApartmentService {
       where: { apartment: { id: apartment.id } },
     })
 
-    if (hasAppointments) throw new ConflictException("apartment has appointments")
+    if (hasAppointments) throw new ConflictException("El apartamento posee turnos futuros asociados")
 
     const result = await this.repository.softDelete(id)
 

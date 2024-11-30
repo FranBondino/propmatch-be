@@ -18,7 +18,7 @@ export class Appointment extends BaseModel {
   endTime: Date
 
   @Column()
-  status: 'pending' | 'accepted' | 'cancelled'
+  status: 'Pendiente' | 'Confirmado' | 'Cancelado'
 
   @ManyToOne(() => Apartment, { nullable: true })
   apartment: Relation<Apartment>

@@ -19,8 +19,6 @@ export class AppointmentService {
     private readonly repository: Repository<Appointment>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
-    @InjectRepository(Car)
-    private readonly carRepository: Repository<Car>,
     @InjectRepository(Apartment)
     private readonly apartmentRepository: Repository<Apartment>,
     private readonly emailNotificationService: EmailNotificationService,
@@ -91,11 +89,11 @@ export class AppointmentService {
       // Notify the user about the status update
       await this.emailNotificationService.sendEmail(
         appointment.user.email,
-        'Appointment Status Update',
-        `Your appointment request has been ${dto.status}.`
+        'Actualizacion del Estado del Turno',
+        `Tu turno ha sido ${dto.status}.`
       );
     } catch (error) {
-      console.error('Error sending email notification:', error); // Improved error handling
+      console.error('Error al enviar email de notificacion:', error); // Improved error handling
       // Optionally handle email notification failure
     }
 
@@ -117,7 +115,7 @@ export class AppointmentService {
       where: {
         owner: { id: ownerId },
         startTime: Between(today, twoWeeksLater),
-        status: In(['pending', 'accepted']) //filter to count only confirmed or pending appointments
+        status: In(['Pendiente', 'Confirmado']) //filter to count only confirmed or pending appointments
       },
     });
 
@@ -167,7 +165,7 @@ export class AppointmentService {
   private async prepareAppointmentEntities(dto: CreateAppointmentDto, userId: string): Promise<{ user: User, owner: User, apartment?: Apartment }> {
     const user = await this.findUserById(userId);
     const owner = await this.findOwnerById(dto.ownerId);
-    const { car: foundCar, apartment: foundApartment } = await this.findAssociatedEntities(dto, owner.id);
+    const { apartment: foundApartment } = await this.findAssociatedEntities(dto, owner.id);
 
     return { user, owner, apartment: foundApartment };
   }
@@ -218,7 +216,7 @@ export class AppointmentService {
 
     // Throw error if there are overlapping appointments
     if (overlappingAppointments.length) {
-      throw new BadRequestException('Appointment time overlaps with an existing appointment');
+      throw new BadRequestException('Horario del turno coincide con turno existente');
     }
   }
 
@@ -233,7 +231,7 @@ export class AppointmentService {
       user,
       apartment,
       owner, // Associate the owner, who is a User
-      status: 'pending',
+      status: 'Pendiente',
     });
   }
 
@@ -252,17 +250,17 @@ export class AppointmentService {
       await this.emailNotificationService.sendEmail(
         user.email,
         'Appointment Request Received',
-        `Your appointment request for the (${appointmentDetails}) has been received.`
+        `Tu solicitud de turno para la propiedad en calle (${appointmentDetails}) ha sido enviada.`
       );
 
       // Email to the owner
       await this.emailNotificationService.sendEmail(
         owner.email,
         'New Appointment Request',
-        `A new appointment request has been made for your (${appointmentDetails}).`
+        `Un nuevo turno ha sido solicitado para tu propiedad en calle (${appointmentDetails}).`
       );
     } catch (error) {
-      console.error('Error sending email notifications:', error);
+      console.error('Error al enviar email de notificacion:', error);
     }
   }
 
@@ -281,11 +279,11 @@ export class AppointmentService {
     // Check if the appointment is at least 2 days away
     const daysUntilAppointment = differenceInDays(appointmentStartTime, currentDate);
     if (daysUntilAppointment < 2) {
-      throw new BadRequestException('You can only cancel appointments at least two days before the scheduled time');
+      throw new BadRequestException('Solo puedes cancelar turnos, con dos dias de anterioridad a la fecha');
     }
 
     // Cancel the appointment
-    appointment.status = 'cancelled';
+    appointment.status = 'Cancelado';
     await this.repository.save(appointment);
 
     // Notify the user and owner about the cancellation
@@ -299,24 +297,23 @@ export class AppointmentService {
   ): Promise<void> {
     try {
       // Determine the type and details of the appointment
-      const appointmentType = 'apartment';
       const appointmentDetails = apartment?.fullAddress;
 
       // Email to the user about the cancellation
       await this.emailNotificationService.sendEmail(
         user.email,
-        'Appointment Cancelled',
-        `Your appointment for the ${appointmentType} (${appointmentDetails}) has been cancelled.`
+        'Turno cancelado',
+        `Tu turno para la propiedad en calle (${appointmentDetails}) ha sido cancelado.`
       );
 
       // Email to the owner about the cancellation
       await this.emailNotificationService.sendEmail(
         owner.email,
-        'Appointment Cancelled',
-        `The appointment for your ${appointmentType} (${appointmentDetails}) has been cancelled by the user.`
+        'Turno cancelado',
+        `Tu turno para la propiedad en calle (${appointmentDetails}) ha sido cancelado por el cliente.`
       );
     } catch (error) {
-      console.error('Error sending cancellation email notifications:', error);
+      console.error('Error al enviar el mail de notificacion de la cancelacion:', error);
     }
   }
 

@@ -28,11 +28,8 @@ import { Request } from 'express'
 const { admin } = UserType
 
 @Controller('apartment-rents-metrics-owner')
-@AllowedUsers(admin)
 @UseGuards(JwtAuthGuard, AllowedUsersGuard)
 @UseInterceptors(ResponseInterceptor, ClassSerializerInterceptor)
-@ApiBearerAuth('admin')
-@ApiTags('admin/apartment-rent-metric-owner')
 export class ApartmentRentMetricOwnerController {
   constructor(
     private readonly service: ApartmentRentMetricOwnerService,

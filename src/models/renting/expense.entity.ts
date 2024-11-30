@@ -24,4 +24,7 @@ export class Expense extends BaseModel {
 
   @ManyToOne(() => Apartment, {nullable: true})
   apartment: Relation<Apartment>
+
+  @Column({ nullable: true})
+  recurring: Boolean
 }

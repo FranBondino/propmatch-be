@@ -26,7 +26,6 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger'
 const { admin } = UserType
 
 @Controller('apartment-rents')
-@AllowedUsers(admin)
 @UseGuards(JwtAuthGuard, AllowedUsersGuard)
 @UseInterceptors(ResponseInterceptor, ClassSerializerInterceptor)
 @ApiBearerAuth('admin')
@@ -77,7 +76,7 @@ public async getAll(
   }
 
   @Put()
-  public async update(@Body() dto: UpdateApartmentRentDto): Promise<void> {
+  public async update(@Body() dto: UpdateApartmentRentDto): Promise<ApartmentRent> {
     return this.service.update(dto)
   }
 

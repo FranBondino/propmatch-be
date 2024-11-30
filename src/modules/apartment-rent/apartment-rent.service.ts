@@ -98,7 +98,7 @@ export class ApartmentRentService {
     return GetAllPaginatedQB<ApartmentRent>(qb, query)
   }
 
-  public async update(dto: UpdateApartmentRentDto): Promise<void> {
+  public async update(dto: UpdateApartmentRentDto): Promise<ApartmentRent> {
     let client: Client
     const obj = await this.getById(dto.id, null)
 
@@ -110,11 +110,12 @@ export class ApartmentRentService {
       if (!client) throw new NotFoundException(CLIENT_NOT_FOUND)
     }
 
-    await this.repository.save({
+    return this.repository.save({
       ...obj,
       ...dto,
       client
     })
+
   }
 
   public async deleteById(id: string): Promise<void> {

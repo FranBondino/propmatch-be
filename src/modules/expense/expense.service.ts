@@ -37,6 +37,7 @@ export class ExpenseService {
     expense.cost = dto.cost
     expense.date = dto.date
     expense.description = dto.description
+    expense.recurring = dto.recurring
     expense.owner = user
     expense.apartment = apartment
 
@@ -80,13 +81,13 @@ export class ExpenseService {
     return obj
   }
 
-  public async getByApartmentId(apartmentId: string, options: FindOptionsWhere<Expense>): Promise<Expense[]> {
-    const expenses = await this.repository.find({
-      where: { apartment: { id: apartmentId } },
-      ...options,
-    })
-
-    return expenses
+  public async getByApartmentId(apartmentId: string, query: PaginateQueryRaw): Promise<Paginated<Expense>> {
+    const qb = this.repository
+      .createQueryBuilder('expense')
+      .leftJoinAndSelect('expense.apartment', 'apartment')
+      .where('apartment.id = :id', { id: apartmentId });
+  
+    return GetAllPaginatedQB<Expense>(qb, query);
   }
 
 
@@ -130,19 +131,20 @@ export class ExpenseService {
         owner: { id: userId },
         apartment: { id: apartmentId },
         date: Between(startOfPreviousMonth, endOfPreviousMonth),
+        recurring: true, // Ensure only recurring expenses are fetched
       },
     })
 
     return previousExpenses
   }
 
-  public async update(dto: UpdateExpenseDto): Promise<void> {
+  public async update(dto: UpdateExpenseDto): Promise<Expense> {
     const obj = await this.getById(dto.id, null)
   
     const apartment = await this.apartmentRepository.findOne({ where: { id: dto.apartmentId } })
     if (!apartment) throw new NotFoundException(APARTMENT_NOT_FOUND)
 
-    await this.repository.save({ ...obj, ...dto, apartment })
+    return this.repository.save({ ...obj, ...dto, apartment })
   }
 
   public async deleteById(id: string): Promise<void> {

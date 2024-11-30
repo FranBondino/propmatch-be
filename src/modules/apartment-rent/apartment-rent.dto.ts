@@ -1,3 +1,4 @@
+import { Transform } from 'class-transformer'
 import {
   IsNotEmpty,
   IsOptional,
@@ -8,14 +9,17 @@ import {
 } from 'class-validator'
 
 export class CreateApartmentRentDto {
+  @Transform(({ value }) => parseFloat(value))  // Transform string to number
   @IsNumber()
   cost: number
 
+  @Transform(({ value }) => new Date(value).toISOString())
   @IsDateString()
-  startedAt: Date
+  startedAt: string
 
+  @Transform(({ value }) => new Date(value).toISOString())
   @IsDateString()
-  endedAt: Date
+  endedAt: string
 
   @IsUUID()
   apartmentId: string
@@ -31,14 +35,17 @@ export class UpdateApartmentRentDto {
   id: string
 
   @IsOptional()
+  @Transform(({ value }) => parseFloat(value))  // Transform string to number
   @IsNumber()
   cost: number
 
   @IsOptional()
+  @Transform(({ value }) => new Date(value).toISOString())
   @IsDateString()
   startedAt?: Date
 
   @IsOptional()
+  @Transform(({ value }) => new Date(value).toISOString())
   @IsDateString()
   endedAt?: Date
 

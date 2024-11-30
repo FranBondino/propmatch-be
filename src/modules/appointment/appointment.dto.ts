@@ -31,6 +31,6 @@ export class UpdateAppointmentStatusDto {
   id: string;
 
   @IsNotEmpty()
-  @IsEnum(['accepted', 'cancelled'])
-  status: 'accepted' | 'cancelled';
+  @IsEnum(['Confirmado', 'Cancelado'])
+  status: 'Confirmado' | 'Cancelado';
 }

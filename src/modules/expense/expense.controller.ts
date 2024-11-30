@@ -25,20 +25,28 @@ import { ResponseInterceptor } from '../../helpers/response.interceptor'
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger'
 import { User } from '../../models/user.entity'
 import { Request } from 'express';
+import { ExpenseJobService } from '../jobs/expense-job.service'
 
 
 const { admin } = UserType
 
 @Controller('expenses')
-@AllowedUsers(admin)
 @UseGuards(JwtAuthGuard, AllowedUsersGuard)
 @UseInterceptors(ResponseInterceptor, ClassSerializerInterceptor)
-@ApiBearerAuth('admin')
-@ApiTags('admin/expenses')
 export class ExpenseController {
   constructor(
     private readonly service: ExpenseService,
+    private readonly expenseJobService: ExpenseJobService,
   ) { }
+
+  @Get('apartment/:apartmentId')
+  async getByApartmentId(
+    @Param('apartmentId') apartmentId: string,
+    @Query() query: PaginateQueryRaw
+  ): Promise<Paginated<Expense>> {
+    return this.service.getByApartmentId(apartmentId, query);
+  }
+
 
   @Get()
   public async getAll(@Query() query: PaginateQueryRaw): Promise<Paginated<Expense>> {
@@ -49,6 +57,12 @@ export class ExpenseController {
   public async create(@Body() dto: CreateExpenseDto, @Req() req: Request): Promise<Expense> {
     const user = req.user as User
     return this.service.create(dto, user.id)
+  }
+
+  @Post('trigger-recurring-expenses')
+  public async triggerRecurringExpenses(): Promise<{ message: string }> {
+    await this.expenseJobService.triggerRecurringExpensesManually();
+    return { message: 'Gastos recurrentes generados exitosamente!' };
   }
 
   @Get('apartment/:apartmentId/:year/:month')
@@ -68,7 +82,7 @@ export class ExpenseController {
   }
 
   @Put()
-  public async update(@Body() dto: UpdateExpenseDto): Promise<void> {
+  public async update(@Body() dto: UpdateExpenseDto): Promise<Expense> {
     return this.service.update(dto)
   }
 

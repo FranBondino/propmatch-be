@@ -41,4 +41,9 @@ export class ExpenseJobService {
 
     }
   }
+  // Manual trigger for MVP demo
+  async triggerRecurringExpensesManually(): Promise<void> {
+    await this.createExpensesForCurrentMonth();
+    console.log('Recurring expenses manually triggered.');
+  }
 }

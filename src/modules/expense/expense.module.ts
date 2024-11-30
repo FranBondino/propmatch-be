@@ -7,6 +7,7 @@ import { ApartmentModule } from '../apartment/apartment.module'
 import { Expense } from '../../models/renting/expense.entity'
 import { Apartment } from '../../models/renting/apartment.entity'
 import { User } from '../../models/user.entity'
+import { ExpenseJobService } from '../jobs/expense-job.service'
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { User } from '../../models/user.entity'
   ],
   providers: [
     ExpenseService,
+    ExpenseJobService
   ],
   controllers: [
     ExpenseController,

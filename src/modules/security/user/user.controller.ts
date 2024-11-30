@@ -103,6 +103,7 @@ export class UserController {
     await this.logService.create(logUpdateUser(req.user, obj.id))
   }
 
+  @UseGuards(JwtAuthGuard)
   @Get('/current')
   public async getCurrentUser(@Req() req: Request, @Query() queryOptions: any): Promise<UserResponseDto> {
     const options = getOptionsFromJSON(queryOptions)
