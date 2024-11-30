@@ -1,5 +1,5 @@
 
-import { Module } from '@nestjs/common'
+import { forwardRef, Module } from '@nestjs/common'
 import { PassportModule } from '@nestjs/passport'
 import { JwtModule } from '@nestjs/jwt'
 import { jwtConfig } from '../../config/jwtconfig'
@@ -16,6 +16,9 @@ import { User } from '../../models/user.entity'
 import { Log } from '../../models/log.entity'
 import { BannedToken } from '../../models/banned-token.entity'
 import { LogController } from './log/log.controller'
+import { SessionAudit } from '../../models/session-audit.entity'
+import { SessionAuditModule } from '../session-audit/session-audit.module'
+import { SessionAuditService } from '../session-audit/session-audit.service'
 
 
 @Module({
@@ -25,8 +28,10 @@ import { LogController } from './log/log.controller'
     TypeOrmModule.forFeature([
       User,
       Log,
-      BannedToken
+      BannedToken,
+      SessionAudit
     ]),
+    forwardRef(() => SessionAuditModule), // Wrap the import in forwardRef
   ],
   controllers: [
     AuthController,
@@ -42,6 +47,7 @@ import { LogController } from './log/log.controller'
     AuthService,
     JwtStrategy,
     LogService,
+    SessionAuditService
   ],
   exports: [
     UserService,

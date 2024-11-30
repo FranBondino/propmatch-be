@@ -19,6 +19,7 @@ import {
 import { IJwtPayload } from './auth.interface'
 import { errorsCatalogs } from '../../../catalogs/errors-catalogs'
 import { LogService } from '../log/log.service'
+import { SessionAuditService } from '../../../modules/session-audit/session-audit.service'
 
 const {
   EMAIL_OR_PASSWORD_INVALID,
@@ -31,7 +32,7 @@ export class AuthService {
     @Inject(forwardRef(() => UserService))
     private readonly userService: UserService,
     private readonly jwtService: JwtService,
-    private readonly logService: LogService
+    private readonly sessionAuditService: SessionAuditService
   ) { }
 
   private generateJWTPayload(user: User): IJwtPayload {
@@ -57,12 +58,10 @@ export class AuthService {
     const payload = this.generateJWTPayload(foundUser)
     const token = this.jwtService.sign(payload)
 
-    await this.logService.create({
-      resource: 'AUTH',        // The resource being acted upon
-      resourceId: foundUser.id,  // The user ID
-      action: 'LOGIN',         // Action type
-      executingUser: foundUser, // The user who logged in
-    });
+    await this.sessionAuditService.logAction(
+      'LOGIN',         // Action type
+      foundUser.id, // The user who logged in
+    );
 
 
     const user = plainToClass(User, foundUser)
@@ -93,12 +92,10 @@ export class AuthService {
 
   public async logout(userId: string): Promise<void> {
     const foundUser = await this.userService.getById(userId, null);  // Fetch user info
-    await this.logService.create({
-      resource: 'AUTH',         // The resource being acted upon
-      resourceId: userId,      // The user ID
-      action: 'LOGOUT',         // Action type
-      executingUser: foundUser, // The user who is logging out
-    });
+    await this.sessionAuditService.logAction(
+      'LOGOUT',         // Action type
+      foundUser.id, // The user who logged in
+    );
     return null
   }
 

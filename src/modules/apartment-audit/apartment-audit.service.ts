@@ -43,11 +43,11 @@ export class ApartmentAuditService {
   public async getAll(query: PaginateQueryRaw): Promise<Paginated<ApartmentAudit>> {
     const qb = this.repository.createQueryBuilder('apartmentAudit')
       .leftJoinAndSelect('apartmentAudit.user', 'user')
-      .leftJoinAndSelect('apartmentAudit.car', 'apartment');
+      .leftJoinAndSelect('apartmentAudit.apartment', 'apartment');
     
     if (query.search) {
       qb.andWhere('apartmentAudit.action = :action', { action: query.search })
-      qb.orWhere(`LOWER(user.name) ILIKE '%${query.search.toLocaleLowerCase()}%'`)
+      qb.orWhere(`LOWER(user.fullName) ILIKE '%${query.search.toLocaleLowerCase()}%'`)
       qb.orWhere(`LOWER(apartment.fullAddress) ILIKE '%${query.search.toLocaleLowerCase()}%'`)
       qb.orWhere(`LOWER(apartment.city) ILIKE '%${query.search.toLocaleLowerCase()}%'`);
     }
