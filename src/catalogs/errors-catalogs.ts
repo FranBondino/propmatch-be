@@ -10,12 +10,12 @@ const {
 
 export const errorsCatalogs = {
   EMAIL_OR_PASSWORD_INVALID: {
-    message: 'Email or password invalid',
+    message: 'Email o contrasena incorrecta',
     code: 'EMAIL_OR_PASSWORD_INVALID',
     httpStatus: UNAUTHORIZED
   },
   PASSWORD_INVALID: {
-    message: 'password invalid',
+    message: 'Contrasena incorrecta',
     code: 'PASSWORD_INVALID',
     httpStatus: UNAUTHORIZED
   },
@@ -35,7 +35,7 @@ export const errorsCatalogs = {
     httpStatus: NOT_FOUND
   },
   USER_EMAIL_TAKEN: {
-    message: 'That user email is already taken',
+    message: 'Ese mail ya se encuentra registrado',
     code: 'USER_EMAIL_TAKEN',
     httpStatus: BAD_REQUEST
   },
@@ -89,7 +89,7 @@ export const errorsCatalogs = {
     httpStatus: NOT_FOUND
   },
   APARTMENT_HAS_RENTS: {
-    message: 'Apartment has rents',
+    message: 'La propiedad posee alquileres',
     code: 'APARTMENT_HAS_RENTS',
     httpStatus: CONFLICT
   },

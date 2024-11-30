@@ -15,6 +15,7 @@ import { UserUtilsImpl, USER_UTILS } from './user/user-utils/user.utils'
 import { User } from '../../models/user.entity'
 import { Log } from '../../models/log.entity'
 import { BannedToken } from '../../models/banned-token.entity'
+import { LogController } from './log/log.controller'
 
 
 @Module({
@@ -29,7 +30,8 @@ import { BannedToken } from '../../models/banned-token.entity'
   ],
   controllers: [
     AuthController,
-    UserController
+    UserController,
+    LogController
   ],
   providers: [
     {
