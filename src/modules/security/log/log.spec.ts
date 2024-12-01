@@ -5,7 +5,7 @@ import { Log } from '../../../models/log.entity'
 import { CreateLogDto } from './log.dto'
 import { PaginateQueryRaw } from '../../../types/types'
 import { User } from '../../../models/user.entity'
-import { logCreateUser } from '../../../helpers/log.helper'
+import { logCreateUser } from '../../../s/log.'
 import { Repository } from 'typeorm'
 
 describe('LogService', () => {

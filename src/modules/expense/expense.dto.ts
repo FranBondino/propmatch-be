@@ -26,6 +26,11 @@ export class CreateExpenseDto {
     value === 'true' || value === true || value === 'Yes' ? true : 
     value === 'false' || value === false || value === 'No' ? false : value
   )  // Handle "Yes" and "No" as booleans
+
+  @Transform(({ value }) => 
+    value === 'true' || value === true || value === 'Yes' ? true : 
+    value === 'false' || value === false || value === 'No' ? false : value
+  )  // Handle "Yes" and "No" as booleans
   @IsBoolean()
   recurring?: Boolean
 
@@ -36,6 +41,14 @@ export class CreateExpenseDto {
   @IsOptional()
   @IsUUID()
   apartmentId: string
+
+  @IsOptional()
+  @Transform(({ value }) => 
+    value === 'true' || value === true || value === 'Yes' ? true : 
+    value === 'false' || value === false || value === 'No' ? false : value
+  )  // Handle "Yes" and "No" as booleans
+  @IsBoolean()
+  isManual: Boolean
 }
 
 export class UpdateExpenseDto {

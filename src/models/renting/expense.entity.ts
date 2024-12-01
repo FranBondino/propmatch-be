@@ -27,4 +27,8 @@ export class Expense extends BaseModel {
 
   @Column({ nullable: true})
   recurring: Boolean
+
+  @Column({ nullable: true, default: false }) // Nullable and defaults to false
+  isManual: Boolean | null;
+
 }

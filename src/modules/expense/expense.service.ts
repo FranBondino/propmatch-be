@@ -1,4 +1,4 @@
-import { FindOptionsWhere, Between, Repository } from 'typeorm'
+import { FindOptionsWhere, Between, Repository, DeleteResult } from 'typeorm'
 import { Injectable, NotFoundException } from '@nestjs/common'
 import { GetAllPaginatedQB } from '../../helpers/pagination.helper'
 import { Apartment } from '../../models/renting/apartment.entity'
@@ -40,6 +40,7 @@ export class ExpenseService {
     expense.recurring = dto.recurring
     expense.owner = user
     expense.apartment = apartment
+    expense.isManual = dto.isManual ?? false
 
     return this.repository.save(expense)
   }
@@ -150,5 +151,31 @@ export class ExpenseService {
   public async deleteById(id: string): Promise<void> {
     const result = await this.repository.softDelete(id)
     if (result.affected === 0) throw new NotFoundException(EXPENSE_NOT_FOUND)
+  }
+
+  public async getTimeUntilNextCron(): Promise<{ days: number; hours: number; minutes: number; seconds: number }> {
+    const now = new Date();
+    const nextMonth = now.getMonth() + 1;
+    const nextCron = new Date(now.getFullYear(), nextMonth, 1, 0, 0, 0, 0);
+  
+    // Account for year transition
+    if (nextMonth > 11) {
+      nextCron.setFullYear(nextCron.getFullYear() + 1);
+      nextCron.setMonth(0); // January
+    }
+  
+    const diff = nextCron.getTime() - now.getTime();
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+    const minutes = Math.floor((diff / (1000 * 60)) % 60);
+    const seconds = Math.floor((diff / 1000) % 60);
+  
+    return { days, hours, minutes, seconds };
+  }
+
+  public async deleteManualExpenses(): Promise<void> {
+    await this.repository.delete({
+        isManual: true
+    });
   }
 }

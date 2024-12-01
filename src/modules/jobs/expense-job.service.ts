@@ -14,7 +14,7 @@ export class ExpenseJobService {
   ) { }
 
   @Cron(CronExpression.EVERY_1ST_DAY_OF_MONTH_AT_MIDNIGHT)
-  async createExpensesForCurrentMonth(): Promise<void> {
+  async createExpensesForCurrentMonth(isManual: boolean = false): Promise<void> {
     // Get all users (owners)
     const owners = await this.userService.getAllOwners();
 
@@ -33,6 +33,7 @@ export class ExpenseJobService {
             date: new Date(),
             cost: expense.cost,
             description: expense.description,
+            isManual
           };
 
           await this.expenseService.create(newApartmentExpenseDto, owner.id);  // Pass user ID when creating the expense
@@ -42,8 +43,14 @@ export class ExpenseJobService {
     }
   }
   // Manual trigger for MVP demo
-  async triggerRecurringExpensesManually(): Promise<void> {
-    await this.createExpensesForCurrentMonth();
+  public async triggerRecurringExpensesManually(): Promise<void> {
+    await this.createExpensesForCurrentMonth(true);
     console.log('Recurring expenses manually triggered.');
+  }
+
+  @Cron('*/2 * * * *') // Run every 2 minutes (or adjust as needed)
+  async cleanUpManualExpenses(): Promise<void> {
+    await this.expenseService.deleteManualExpenses();
+    console.log('Manual expenses cleaned up.');
   }
 }

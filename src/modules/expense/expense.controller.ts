@@ -52,6 +52,11 @@ export class ExpenseController {
   public async getAll(@Query() query: PaginateQueryRaw): Promise<Paginated<Expense>> {
     return this.service.getAll(query)
   }
+  
+  @Get('next-cron-timer')
+  public async getNextCron(): Promise<{ days: number; hours: number; minutes: number; seconds: number }> {
+    return this.service.getTimeUntilNextCron()
+  }
 
   @Post()
   public async create(@Body() dto: CreateExpenseDto, @Req() req: Request): Promise<Expense> {
