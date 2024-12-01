@@ -42,9 +42,40 @@ export class ExpenseJobService {
 
     }
   }
+
+  public async createExpensesForCurrentMonthDemo(isManual: boolean): Promise<void> {
+    // Get all users (owners)
+    const owners = await this.userService.getAllOwners();
+
+    for (const owner of owners) {
+      // Fetch apartments and cars for the current user
+      const apartments = await this.apartmentService.findByOwnerId(owner.id);
+      //const cars = await this.carService.findByOwnerId(user.id);
+
+      // Create expenses for apartments
+      for (const apartment of apartments) {
+        const previousMonthExpenses = await this.expenseService.getPreviousMonthApartmentExpenses(owner.id, apartment.id);
+
+        for (const expense of previousMonthExpenses) {
+          const newApartmentExpenseDto: CreateExpenseDto = {
+            apartmentId: apartment.id,
+            date: new Date(),
+            cost: expense.cost,
+            recurring: true,
+            description: expense.description,
+            isManual
+          };
+
+          await this.expenseService.create(newApartmentExpenseDto, owner.id);  // Pass user ID when creating the expense
+        }
+      }
+
+    }
+  }
+
   // Manual trigger for MVP demo
   public async triggerRecurringExpensesManually(): Promise<void> {
-    await this.createExpensesForCurrentMonth(true);
+    await this.createExpensesForCurrentMonthDemo(true);
     console.log('Recurring expenses manually triggered.');
   }
 
