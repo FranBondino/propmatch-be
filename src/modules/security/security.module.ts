@@ -19,6 +19,7 @@ import { LogController } from './log/log.controller'
 import { SessionAudit } from '../../models/session-audit.entity'
 import { SessionAuditModule } from '../session-audit/session-audit.module'
 import { SessionAuditService } from '../session-audit/session-audit.service'
+import { ApartmentRent } from '../../models/renting/apartment-rent.entity'
 
 
 @Module({
@@ -29,7 +30,8 @@ import { SessionAuditService } from '../session-audit/session-audit.service'
       User,
       Log,
       BannedToken,
-      SessionAudit
+      SessionAudit,
+      ApartmentRent
     ]),
     forwardRef(() => SessionAuditModule), // Wrap the import in forwardRef
   ],

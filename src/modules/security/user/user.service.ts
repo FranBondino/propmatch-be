@@ -5,7 +5,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common'
-import { FindOneOptions, FindOptionsWhere, Repository } from 'typeorm'
+import { FindOneOptions, FindOptionsWhere, In, MoreThan, Repository } from 'typeorm'
 import { GetAllPaginatedQB } from '../../../helpers/pagination.helper'
 import { Paginated, PaginateQueryRaw, UserPreferences, UserWithMatchScore } from '../../../types/types'
 import { CreateUserDto, UpdateMyProfileDto, UpdateUserDto, UserPreferencesDto } from './user.dto'
@@ -14,6 +14,7 @@ import { IUserUtils } from './user.interface'
 import { USER_UTILS } from './user-utils/user.utils'
 import { User } from '../../../models/user.entity'
 import { InjectRepository } from '@nestjs/typeorm'
+import { ApartmentRent } from '../../../models/renting/apartment-rent.entity'
 
 const {
   USER_NOT_FOUND,
@@ -30,6 +31,8 @@ export class UserService {
   constructor(
     @InjectRepository(User)
     private readonly repository: Repository<User>,
+    @InjectRepository(ApartmentRent)
+    private readonly apartmentRentRepository: Repository<ApartmentRent>,
     @Inject(USER_UTILS)
     private readonly userUtils: IUserUtils,
   ) { }
@@ -192,8 +195,41 @@ export class UserService {
   }
 
   public async deleteById(id: string): Promise<void> {
-    const result = await this.repository.softDelete(id)
-    if (result.affected === 0) throw new NotFoundException(USER_NOT_FOUND)
+    // Check if the user exists
+    const user = await this.repository.findOne({
+      where: { id },
+      relations: ['appointments', 'apartments'], // Fetch related apartments and appointments
+    });
+  
+    if (!user) throw new NotFoundException(USER_NOT_FOUND);
+  
+    // Check for active rents via the ApartmentRent entity
+    const activeRentCount = await this.apartmentRentRepository.count({
+      where: {
+        apartment: In(user.apartments.map(apartment => apartment.id)), // Match the user's apartments
+        endedAt: MoreThan(new Date()), // Check for active rents
+      },
+    });
+  
+    // Check for future appointments
+    const hasFutureAppointments = user.appointments?.some(
+      appointment => new Date(appointment.startTime) > new Date()
+    );
+  
+    // Prevent deletion if conditions are met
+    if (activeRentCount > 0 || hasFutureAppointments) {
+      throw new BadRequestException(
+        `ERROR: no se puede eliminar al usuario. ${
+          activeRentCount > 0 ? 'El usuario posee alquileres activos. ' : ''
+        }${
+          hasFutureAppointments ? 'El usuario posee turnos por completar.' : ''
+        }`
+      );
+    }
+  
+    // Proceed with deletion
+    const result = await this.repository.softDelete(id);
+    if (result.affected === 0) throw new NotFoundException(USER_NOT_FOUND);
   }
 
   public async hashPassword(value: string): Promise<string> {

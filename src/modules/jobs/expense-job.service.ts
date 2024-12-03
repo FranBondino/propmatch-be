@@ -4,6 +4,7 @@ import { ExpenseService } from '../expense/expense.service'
 import { ApartmentService } from '../apartment/apartment.service'
 import { CreateExpenseDto } from '../expense/expense.dto'
 import { UserService } from '../security/user/user.service'
+import { Paginated } from 'src/types/types'
 
 @Injectable()
 export class ExpenseJobService {

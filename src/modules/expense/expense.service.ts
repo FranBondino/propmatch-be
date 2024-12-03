@@ -155,16 +155,17 @@ export class ExpenseService {
 
   public async getTimeUntilNextCron(): Promise<{ days: number; hours: number; minutes: number; seconds: number }> {
     const now = new Date();
-    const nextMonth = now.getMonth() + 1;
-    const nextCron = new Date(now.getFullYear(), nextMonth, 1, 0, 0, 0, 0);
+    
+    // Determine the next cron execution date
+    const nextMonth = (now.getMonth() + 1) % 12; // Correctly cycle back to 0 (January) after December
+    const nextYear = now.getMonth() === 11 ? now.getFullYear() + 1 : now.getFullYear(); // Handle year transition
+    
+    const nextCron = new Date(nextYear, nextMonth, 1, 0, 0, 0, 0); // First day of next month at midnight
   
-    // Account for year transition
-    if (nextMonth > 11) {
-      nextCron.setFullYear(nextCron.getFullYear() + 1);
-      nextCron.setMonth(0); // January
-    }
-  
+    // Calculate the difference in milliseconds
     const diff = nextCron.getTime() - now.getTime();
+  
+    // Convert milliseconds into days, hours, minutes, and seconds
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
     const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
     const minutes = Math.floor((diff / (1000 * 60)) % 60);
@@ -172,6 +173,7 @@ export class ExpenseService {
   
     return { days, hours, minutes, seconds };
   }
+  
 
   public async deleteManualExpenses(): Promise<void> {
     await this.repository.delete({
