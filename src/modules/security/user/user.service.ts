@@ -27,7 +27,6 @@ export class UserService {
 
   private readonly logger = new Logger(UserService.name);
 
-
   constructor(
     @InjectRepository(User)
     private readonly repository: Repository<User>,
@@ -187,11 +186,15 @@ export class UserService {
     return this.repository.save(dto)
   }
 
-  public async updateMyProfile(id: string, dto: UpdateMyProfileDto): Promise<User> {
-    const res = await this.repository.update(id, dto)
-    if (res.affected === 0) throw new NotFoundException(USER_NOT_FOUND)
+  public async updateMyProfile(userId: string, dto: UpdateMyProfileDto): Promise<void> {
+    const user = await this.repository.findOne({
+      where: { id: userId},
+    })
+    if (!user) throw new NotFoundException('user was not found')
+    
+    Object.assign(user, dto)
 
-    return this.getById(id, null)
+    await this.repository.save(user)
   }
 
   public async deleteById(id: string): Promise<void> {
@@ -268,13 +271,18 @@ export class UserService {
   }
 
   public async getContacts(userId: string, query: PaginateQueryRaw): Promise<Paginated<User>> {
-    const qb = this.repository.createQueryBuilder('user')
+    const qb = this.repository
+    .createQueryBuilder('user')
       .leftJoinAndSelect('user.contacts', 'contact') // Assuming there's a 'contacts' relation
       .where('user.id = :userId', { userId });
+      
+      qb.andWhere('contact.id IS NOT NULL')          // Ensure only contacts are included
+        .andWhere('contact.id != :userId', { userId }); // Exclude the user themselves
+
 
     // Add filtering or search logic if needed
     if (query.search) {
-      qb.andWhere(`LOWER(user.fullName) Like :search`, { search: `%${query.search.toLowerCase()}%` });
+      qb.andWhere(`LOWER(contact.fullName) Like :search`, { search: `%${query.search.toLowerCase()}%` });
     }
 
     // Return paginated contacts

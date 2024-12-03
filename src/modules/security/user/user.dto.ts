@@ -51,6 +51,11 @@ export class UpdateUserDto {
   email?: string
 
   @IsOptional()
+  @Transform(({ value }) => parseFloat(value))  // Transform string to number
+  @IsNumber()
+  phone: number
+
+  @IsOptional()
   @IsIn(userTypes)
   type?: UserTypes
 
@@ -104,6 +109,11 @@ export class UpdateMyProfileDto {
   @IsOptional()
   @IsEmail()
   email: string
+
+  @IsOptional()
+  @Transform(({ value }) => parseFloat(value))  // Transform string to number
+  @IsNumber()
+  phone: number
 }
 
 export class UserResponseDto {

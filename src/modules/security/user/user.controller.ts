@@ -112,6 +112,22 @@ export class UserController {
     return this.service.getById(user.id, options)
   }
 
+  @Get('/contacts')
+  @UseGuards(JwtAuthGuard)
+  public async getContacts(
+    @Req() req: Request, 
+    @Query() query: PaginateQueryRaw // Get pagination query
+  ): Promise<Paginated<User>> {
+    const user = req.user as User;
+    
+    // Log retrieving contacts action
+    this.logger.log(`User ${user.id} is fetching their contacts`);
+
+    // Call service to get paginated contacts
+    return this.service.getContacts(user.id, query);
+  }
+
+
   @Get('/:id')
   public async get(@Param() { id }: IdRequired, @Query() queryOptions: any): Promise<UserResponseDto> {
     const options = getOptionsFromJSON(queryOptions)
@@ -150,25 +166,10 @@ export class UserController {
     return this.service.findPotentialRoommates(user.id);
   }
 
-  @Get('/contacts')
-  @UseGuards(JwtAuthGuard)
-  public async getContacts(
-    @Req() req: Request, 
-    @Query() query: PaginateQueryRaw // Get pagination query
-  ): Promise<Paginated<User>> {
-    const user = req.user as User;
-    
-    // Log retrieving contacts action
-    this.logger.log(`User ${user.id} is fetching their contacts`);
-
-    // Call service to get paginated contacts
-    return this.service.getContacts(user.id, query);
-  }
-
-
   @Delete('/:id')
   public async delete(@Param() { id }: IdRequired, @Req() req: any): Promise<void> {
     await this.service.deleteById(id)
     await this.logService.create(logDeleteUser(req.user, id))
   }
+
 }
