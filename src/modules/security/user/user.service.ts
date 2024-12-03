@@ -267,6 +267,20 @@ export class UserService {
     return user.contacts
   }
 
+  public async getContacts(userId: string, query: PaginateQueryRaw): Promise<Paginated<User>> {
+    const qb = this.repository.createQueryBuilder('user')
+      .leftJoinAndSelect('user.contacts', 'contact') // Assuming there's a 'contacts' relation
+      .where('user.id = :userId', { userId });
+
+    // Add filtering or search logic if needed
+    if (query.search) {
+      qb.andWhere(`LOWER(user.fullName) Like :search`, { search: `%${query.search.toLowerCase()}%` });
+    }
+
+    // Return paginated contacts
+    return GetAllPaginatedQB(qb, query);
+  }
+
   public async deleteContact(userId: string, contactId: string): Promise<void> {
     const user = await this.repository.findOne({ where: { id: userId }, relations: ['contacts'] });
     
