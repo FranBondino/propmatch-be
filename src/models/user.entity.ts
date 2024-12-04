@@ -22,7 +22,7 @@ export class User extends BaseModel {
   email: string
 
   @Column({ nullable: true })
-  phone: string
+  phone: number
 
   @Column({ default: UserType.user, type: 'varchar' })
   type: UserTypes

@@ -24,8 +24,12 @@ export class ApartmentAuditService {
     changes: { old: Record<string, any>; new: Record<string, any> },
     userId: string,
   ): Promise<void> {
-    const apartment = await this.apartmentRepository.findOneBy({ id: apartmentId });
-    const user = await this.userRepository.findOneBy({ id: userId });
+    const apartment = await this.apartmentRepository.findOne({ 
+      where: {id: apartmentId },
+     })
+    const user = await this.userRepository.findOne({ 
+      where: {id: userId} 
+    });
 
     if (!apartment || !user) {
       throw new Error('Apartment or User not found');
