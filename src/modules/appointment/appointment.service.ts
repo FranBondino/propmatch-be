@@ -77,6 +77,7 @@ export class AppointmentService {
     // Find the appointment to update
     const appointment = await this.repository.findOne({
       where: { id: dto.id },
+      relations: ['user', 'owner', 'apartment'], // Include related entities
     });
     if (!appointment) {
       throw new NotFoundException('Appointment not found');
@@ -266,7 +267,11 @@ export class AppointmentService {
 
   public async cancelAppointment(appointmentId: string, userId: string): Promise<void> {
     const appointment = await this.repository.findOne({
-      where: { id: appointmentId, user: { id: userId } },
+      where: [
+        { id: appointmentId, user: { id: userId } },
+        { id: appointmentId, owner: { id: userId } }
+      ],
+      relations: ['user', 'owner', 'apartment'], // Include related entities
     });
 
     if (!appointment) {

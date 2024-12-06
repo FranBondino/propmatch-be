@@ -6,12 +6,26 @@ import { CreateApartmentDto, UpdateApartmentDto } from './apartment.dto'
 import { PaginateQueryRaw } from '../../types/types'
 import { Repository } from 'typeorm'
 import { ApartmentRent } from '../../models/renting/apartment-rent.entity'
+import { User } from '../../models/user.entity'
+import { Appointment } from '../../models/appointment.entity'
+import { ApartmentAuditService } from '../apartment-audit/apartment-audit.service'
+import { UserService } from '../security/user/user.service'
+import { UserUtilsTestImpl } from '../security/user/user-utils/user.utils-test.impl'
 
 describe('ApartmentService', () => {
   let service: ApartmentService
+  let apartmentAuditService: ApartmentAuditService
+  let userService: UserService
+
   let repo: Repository<Apartment>
   let apartmentRentRepo: Repository<ApartmentRent>
+  let userRepo: Repository<User>
+  let appointmentRepo: Repository<Appointment>
+  
   let apartmentId: string
+
+  let user1: User
+  let user2: User
 
   beforeAll(async () => {
     const db = TestingDB.getInstance()
@@ -19,7 +33,25 @@ describe('ApartmentService', () => {
 
     repo = conn.getRepository(Apartment)
     apartmentRentRepo = conn.getRepository(ApartmentRent)
-    service = new ApartmentService(repo, apartmentRentRepo)
+    userRepo = conn.getRepository(User)
+
+    service = new ApartmentService(repo, apartmentRentRepo, userRepo, appointmentRepo, apartmentAuditService)
+    userService = new UserService(userRepo, apartmentRentRepo, new UserUtilsTestImpl())
+
+    user1 = await userService.create({
+      fullName: 'Test Name 1',
+      email: 'testemail@gmail.com',
+      password: 'Test123456',
+      type: 'owner'
+    })
+
+    user1 = await userService.create({
+      fullName: 'Test Name 2',
+      email: 'testemail2@gmail.com',
+      password: 'Test123456',
+      type: 'owner'
+    })
+
   })
 
   describe('create', () => {
@@ -27,8 +59,8 @@ describe('ApartmentService', () => {
       const dto1: CreateApartmentDto = { city: 'City1', fullAddress: 'Test Address 1' }
       const dto2: CreateApartmentDto = { city: 'City2', fullAddress: 'Test Address 2' }
 
-      const res1 = await service.create(dto1)
-      const res2 = await service.create(dto2)
+      const res1 = await service.create(dto1, user1.id)
+      const res2 = await service.create(dto2, user2.id)
 
       apartmentId = res1.id
 
@@ -101,13 +133,13 @@ describe('ApartmentService', () => {
       const fullAddress = 'Address Edited'
       const dto: UpdateApartmentDto = { id: apartmentId, city, fullAddress }
 
-      await expect(service.update(dto)).resolves.not.toThrow()
+      await expect(service.update(dto, user1.id)).resolves.not.toThrow()
     })
   })
 
   describe('deleteById', () => {
     it('should delete a Apartment by id', async () => {
-      await expect(service.deleteById(apartmentId)).resolves.not.toThrow()
+      await expect(service.deleteById(apartmentId, user1.id)).resolves.not.toThrow()
     })
   })
 })
