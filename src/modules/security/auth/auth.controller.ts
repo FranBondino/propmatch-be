@@ -41,7 +41,6 @@ export class AuthController {
   }
 
   @Put('/profile/update-password')
-  @AllowedUsers(UserType.admin)
   @UseGuards(JwtAuthGuard, AllowedUsersGuard)
   public async updatePassword(@Body() dto: UpdatePasswordDto, @Req() req: Request): Promise<void> {
     const user = req.user as User

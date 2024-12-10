@@ -76,7 +76,7 @@ export class AppointmentController {
   public async getByOwner(@Req() req: Request, @Query() query: PaginateQueryRaw): Promise<Paginated<Appointment>> {
     const user = req.user as User
 
-    return this.service.getAppointmentsByUser(user.id, query);
+    return this.service.getAppointmentsByOwner(user.id, query);
   }
 
 }

@@ -115,11 +115,11 @@ export class UserController {
   @Get('/contacts')
   @UseGuards(JwtAuthGuard)
   public async getContacts(
-    @Req() req: Request, 
+    @Req() req: Request,
     @Query() query: PaginateQueryRaw // Get pagination query
   ): Promise<Paginated<User>> {
     const user = req.user as User;
-    
+
     // Log retrieving contacts action
     this.logger.log(`User ${user.id} is fetching their contacts`);
 
@@ -164,6 +164,11 @@ export class UserController {
 
     // Call the updated service method (no pagination needed anymore)
     return this.service.findPotentialRoommates(user.id);
+  }
+
+  @Get('/types')
+  public getAllUserTypes(): UserType[] {
+    return this.service.getAllUserTypes();
   }
 
   @Delete('/:id')
