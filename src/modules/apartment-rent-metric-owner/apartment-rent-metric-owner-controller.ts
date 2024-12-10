@@ -36,7 +36,7 @@ export class ApartmentRentMetricOwnerController {
   ) { }
 
   @Get('year/:year')
-  public async getTotalRevenueByYear(@Req() req: Request, @Param('year') year: number): Promise<number> {
+  public async getTotalRevenueByYear(@Req() req: Request, @Param('year') year: number): Promise<{ month: number; revenue: number }[]> {
     const user = req.user as User
     return this.service.getTotalRevenueByYear(user.id, year)
   }
@@ -92,7 +92,7 @@ export class ApartmentRentMetricOwnerController {
   }
 
   @Get('apartment-occupancy-rate')
-  public async getApartmentOccupancyRate(@Req() req: Request): Promise<number> {
+  public async getApartmentOccupancyRate(@Req() req: Request): Promise<{ name: string; value: number }[]> {
     const user = req.user as User
     return this.service.getApartmentOccupancyRate(user.id)
   }

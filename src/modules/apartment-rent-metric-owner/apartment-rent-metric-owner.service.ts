@@ -40,23 +40,35 @@ export class ApartmentRentMetricOwnerService {
     private readonly expenseRepository: Repository<Expense>
   ) { }
 
-  public async getTotalRevenueByYear(userId: string, year: number): Promise<number> {
-    const startDate = new Date(`${year}-01-01`)
-    const endDate = new Date(`${year + 1}-01-01`)
+  public async getTotalRevenueByYear(userId: string, year: number): Promise<{ month: number; revenue: number }[]> {
+    const startDate = new Date(`${year}-01-01`);
+    const endDate = new Date(`${year + 1}-01-01`);
 
     const rents = await this.apartmentRentRepository.find({
-      where: {
-        startedAt: Between(startDate, endDate),
-        apartment: {
-          owner: { id: userId }, // Filter by user's apartments
-        }
-      },
-      relations: ['apartment'],
-    })
+        where: {
+            startedAt: Between(startDate, endDate),
+            apartment: {
+                owner: { id: userId }, // Filter by user's apartments
+            },
+        },
+        relations: ['apartment'],
+    });
 
-    const totalRevenue = rents.reduce((sum, rent) => sum + rent.cost, 0)
-    return totalRevenue
-  }
+    // Create an array with 12 slots for each month's revenue initialized to 0
+    const monthlyRevenue = Array(12).fill(0);
+
+    // Accumulate revenue for each month
+    for (const rent of rents) {
+        const month = rent.startedAt.getMonth(); // Get the month (0-based)
+        monthlyRevenue[month] += rent.cost;
+    }
+
+    // Convert to an array of { month, revenue }
+    return monthlyRevenue
+        .map((revenue, index) => ({ month: index + 1, revenue })) // Convert 0-based month to 1-based
+        .filter(item => item.revenue > 0); // Filter out months with no revenue
+}
+
 
   public async getTotalRevenueByQuarter(userId: string, year: number, quarter: number): Promise<number> {
     const startDate = new Date(`${year}-${(quarter - 1) * 3 + 1}-01`)
@@ -147,27 +159,39 @@ export class ApartmentRentMetricOwnerService {
     return totalRents
   }
 
-  public async getApartmentOccupancyRate(userId: string): Promise<number> {
+  public async getApartmentOccupancyRate(userId: string): Promise<{ name: string; value: number }[]> {
     const totalApartments = await this.apartmentRepository.count({
-      where: { owner: { id: userId } }, // Filter by user's apartments
+        where: { owner: { id: userId } }, // Filter by user's apartments
     });
-  
+
+    if (totalApartments === 0) {
+        return [
+            { name: "occupancyRate", value: 0 },
+            { name: "nonOccupancyRate", value: 100 }
+        ]; // No apartments, all are "non-occupied"
+    }
+
     const activeRents = await this.apartmentRentRepository.find({
-      where: {
-        startedAt: LessThanOrEqual(new Date()),
-        endedAt: MoreThanOrEqual(new Date()),
-        apartment: {
-          owner: { id: userId }, // Filter by user's apartments
+        where: {
+            startedAt: LessThanOrEqual(new Date()),
+            endedAt: MoreThanOrEqual(new Date()),
+            apartment: {
+                owner: { id: userId }, // Filter by user's apartments
+            },
         },
-      },
-      relations: ['apartment'],
+        relations: ['apartment'],
     });
-  
+
     const rentedApartments = activeRents.length;
-    const apartmentOccupancyRate = (rentedApartments / totalApartments) * 100;
-  
-    return Number(apartmentOccupancyRate.toFixed(1));
-  }
+
+    const occupancyRate = (rentedApartments / totalApartments) * 100;
+    const nonOccupancyRate = 100 - occupancyRate;
+
+    return [
+        { name: "occupancyRate", value: Number(occupancyRate.toFixed(1)) },
+        { name: "nonOccupancyRate", value: Number(nonOccupancyRate.toFixed(1)) }
+    ];
+}
 
   public async getMonthlyApartmentOccupancyRate(userId: string, year: number, month: number): Promise<number> {
     const startDate = new Date(year, month - 1, 1);
