@@ -58,6 +58,11 @@ export class ExpenseController {
     return this.service.getTimeUntilNextCron()
   }
 
+  @Get('recurring')
+  public async getAllRecurring(@Query() query: PaginateQueryRaw): Promise<Paginated<Expense>> {
+  return this.service.getAllRecurringExpenses(query);
+}
+
   @Post()
   public async create(@Body() dto: CreateExpenseDto, @Req() req: Request): Promise<Expense> {
     const user = req.user as User

@@ -180,4 +180,16 @@ export class ExpenseService {
         isManual: true
     });
   }
+
+  public async getAllRecurringExpenses(query: PaginateQueryRaw): Promise<Paginated<Expense>> {
+    const qb = this.repository.createQueryBuilder('expense')
+      .leftJoinAndSelect('expense.apartment', 'apartment')
+      .where('expense.recurring = :recurring', { recurring: true });
+  
+    if (query.search) {
+      qb.andWhere(`LOWER(expense.description) ILIKE :search`, { search: `%${query.search.toLowerCase()}%` });
+    }
+  
+    return GetAllPaginatedQB<Expense>(qb, query);
+  }
 }

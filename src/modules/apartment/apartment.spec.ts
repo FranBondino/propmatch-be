@@ -23,14 +23,12 @@ describe('ApartmentService', () => {
   let appointmentRepo: Repository<Appointment>
   
   let apartmentId: string
-
   let user1: User
   let user2: User
 
   beforeAll(async () => {
     const db = TestingDB.getInstance()
     const conn = await db.initialize()
-
     repo = conn.getRepository(Apartment)
     apartmentRentRepo = conn.getRepository(ApartmentRent)
     userRepo = conn.getRepository(User)
@@ -44,14 +42,6 @@ describe('ApartmentService', () => {
       password: 'Test123456',
       type: 'owner'
     })
-
-    user1 = await userService.create({
-      fullName: 'Test Name 2',
-      email: 'testemail2@gmail.com',
-      password: 'Test123456',
-      type: 'owner'
-    })
-
   })
 
   describe('create', () => {
