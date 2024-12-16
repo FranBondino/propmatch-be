@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common'
 import { FindOneOptions, FindOptionsWhere, In, MoreThan, Repository } from 'typeorm'
 import { GetAllPaginatedQB } from '../../../helpers/pagination.helper'
-import { Paginated, PaginateQueryRaw, UserPreferences, UserWithMatchScore } from '../../../types/types'
+import { Paginated, PaginateQueryRaw, UserPreferences, UserType, UserWithMatchScore } from '../../../types/types'
 import { CreateUserDto, UpdateMyProfileDto, UpdateUserDto, UserPreferencesDto } from './user.dto'
 import { errorsCatalogs } from '../../../catalogs/errors-catalogs'
 import { IUserUtils } from './user.interface'
@@ -186,12 +186,16 @@ export class UserService {
     return this.repository.save(dto)
   }
 
+  public getAllUserTypes(): UserType[] {
+    return Object.values(UserType);
+  }
+
   public async updateMyProfile(userId: string, dto: UpdateMyProfileDto): Promise<void> {
     const user = await this.repository.findOne({
-      where: { id: userId},
+      where: { id: userId },
     })
     if (!user) throw new NotFoundException('user was not found')
-    
+
     Object.assign(user, dto)
 
     await this.repository.save(user)
@@ -203,9 +207,9 @@ export class UserService {
       where: { id },
       relations: ['appointments', 'apartments'], // Fetch related apartments and appointments
     });
-  
+
     if (!user) throw new NotFoundException(USER_NOT_FOUND);
-  
+
     // Check for active rents via the ApartmentRent entity
     const activeRentCount = await this.apartmentRentRepository.count({
       where: {
@@ -213,23 +217,21 @@ export class UserService {
         endedAt: MoreThan(new Date()), // Check for active rents
       },
     });
-  
+
     // Check for future appointments
     const hasFutureAppointments = user.appointments?.some(
       appointment => new Date(appointment.startTime) > new Date()
     );
-  
+
     // Prevent deletion if conditions are met
     if (activeRentCount > 0 || hasFutureAppointments) {
       throw new BadRequestException(
-        `ERROR: no se puede eliminar al usuario. ${
-          activeRentCount > 0 ? 'El usuario posee alquileres activos. ' : ''
-        }${
-          hasFutureAppointments ? 'El usuario posee turnos por completar.' : ''
+        `ERROR: no se puede eliminar al usuario. ${activeRentCount > 0 ? 'El usuario posee alquileres activos. ' : ''
+        }${hasFutureAppointments ? 'El usuario posee turnos por completar.' : ''
         }`
       );
     }
-  
+
     // Proceed with deletion
     const result = await this.repository.softDelete(id);
     if (result.affected === 0) throw new NotFoundException(USER_NOT_FOUND);
@@ -254,9 +256,9 @@ export class UserService {
   }
 
   public async addContact(userId: string, contactId: string): Promise<User[]> {
-    const user = await this.repository.findOne({ where: { id: userId }});
-    const contact = await this.repository.findOne({ where: { id: contactId }});
-  
+    const user = await this.repository.findOne({ where: { id: userId } });
+    const contact = await this.repository.findOne({ where: { id: contactId } });
+
     if (user && contact) {
       if (!user.contacts) {
         user.contacts = [];
@@ -272,12 +274,12 @@ export class UserService {
 
   public async getContacts(userId: string, query: PaginateQueryRaw): Promise<Paginated<User>> {
     const qb = this.repository
-    .createQueryBuilder('user')
+      .createQueryBuilder('user')
       .leftJoinAndSelect('user.contacts', 'contact') // Assuming there's a 'contacts' relation
       .where('user.id = :userId', { userId });
-      
-      qb.andWhere('contact.id IS NOT NULL')          // Ensure only contacts are included
-        .andWhere('contact.id != :userId', { userId }); // Exclude the user themselves
+
+    qb.andWhere('contact.id IS NOT NULL')          // Ensure only contacts are included
+      .andWhere('contact.id != :userId', { userId }); // Exclude the user themselves
 
 
     // Add filtering or search logic if needed
@@ -291,9 +293,9 @@ export class UserService {
 
   public async deleteContact(userId: string, contactId: string): Promise<void> {
     const user = await this.repository.findOne({ where: { id: userId }, relations: ['contacts'] });
-    
+
     if (!user) throw new Error("User not found.");
-  
+
     user.contacts = user.contacts.filter(contact => contact.id !== contactId);
     await this.repository.save(user);
   }
