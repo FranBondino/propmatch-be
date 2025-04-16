@@ -21,6 +21,7 @@ import { AppointmentModule } from './modules/appointment/appointment.module'
 import { EmailNotificationModule } from './modules/email-notification/email-notification.module'
 import { ApartmentRentMetricOwnerModule } from './modules/apartment-rent-metric-owner/apartment-rent-metric-owner.module'
 import { SessionAuditModule } from './modules/session-audit/session-audit.module'
+import { DataLoaderModule } from './modules/data-loader/data-loader.module'
 
 
 dotenv.config()
@@ -47,7 +48,8 @@ dotenv.config()
     ApartmentRentMetricOwnerModule,
     AppointmentModule,
     EmailNotificationModule,
-    SessionAuditModule
+    SessionAuditModule,
+    DataLoaderModule
   ],
   controllers: [],
   providers: [],
