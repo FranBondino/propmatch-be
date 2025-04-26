@@ -5,6 +5,7 @@ import { BookingMetric } from '../../models/booking-metric.entity';
 import { MetricsService } from './metrics.service';
 import { RawApartment } from '../../models/raw-apartment.entity';
 import { RawAppointment } from '../../models/raw-appointment.entity';
+import { MetricsController } from './metrics.controller';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { RawAppointment } from '../../models/raw-appointment.entity';
         RawAppointment
       ]),
     ],
+  controllers:[MetricsController],
   providers: [MetricsService],
   exports: [MetricsService], // Export to be used in other modules
 })

@@ -5,7 +5,7 @@ export class RawApartment {
   @PrimaryColumn()
   id: number;
 
-  @Column()
+  @Column('integer')
   monthly_rent: number;
 
   @Column()
