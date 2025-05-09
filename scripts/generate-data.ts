@@ -3,58 +3,28 @@ import * as fs from 'fs';
 
 const faker = new Faker({ locale: [en] });
 
-// Apartments (maps to Apartment entity)
-interface Apartment {
-  id: number;
-  monthly_rent: number;
-  city: string;
-  amenities: string[];
-  owner_id: string;
-}
+// Define 1,000 cities to ensure multiple apartments per city
+const cities = Array.from({ length: 1000 }, () => faker.location.city());
+const APARTMENTS_COUNT = 50000;
+const APPOINTMENTS_COUNT = 200000;
 
-const apartments: Apartment[] = [];
+// Generate 50,000 apartments
+const apartments = Array.from({ length: APARTMENTS_COUNT }, (_, i) => ({
+  id: i + 1,
+  owner_id: `owner_${faker.string.uuid()}`,
+  monthly_rent: faker.number.int({ min: 500, max: 3000 }),
+  city: cities[i % cities.length], // Distribute across 1,000 cities (~50 apartments per city)
+  amenities: { pool: faker.datatype.boolean(), gym: faker.datatype.boolean() },
+}));
 
-for (let i = 1; i <= 5000; i++) {
-  apartments.push({
-    id: i,
-    monthly_rent: faker.number.int({ min: 500, max: 2500 }), // $500-$2,500
-    city: faker.location.city(), // e.g., "New York"
-    amenities: faker.helpers.arrayElements(
-      ['Wi-Fi', 'Parking', 'Gym', 'Pet-Friendly', 'Balcony'],
-      { min: 1, max: 4 }
-    ), // e.g., ["Wi-Fi", "Gym"]
-    owner_id: faker.string.uuid(), // Fake User ID, e.g., "123e4567-e89b-12d3-a456-426614174000"
-  });
-}
+// Generate 200,000 appointments
+const appointments = Array.from({ length: APPOINTMENTS_COUNT }, (_, i) => ({
+  id: i + 1,
+  apartment_id: faker.number.int({ min: 1, max: APARTMENTS_COUNT }),
+  start_time: faker.date.recent({ days: 365 }).toISOString().replace('T', ' ').split('.')[0],
+  status: faker.helpers.arrayElement(['Confirmado', 'Pendiente', 'Cancelado']),
+}));
 
-// Create data/ folder if it doesn't exist
-if (!fs.existsSync('data')) fs.mkdirSync('data');
-fs.writeFileSync('data/apartments.json', JSON.stringify(apartments, null, 2));
-console.log('Generated 5,000 apartments');
-
-// Appointments (maps to Appointment entity)
-interface Appointment {
-  renter_id: string;
-  apartment_id: number;
-  status: 'Pendiente' | 'Confirmado';
-  start_time: string;
-  end_time: string;
-  owner_id: string;
-}
-
-const appointments: Appointment[] = [];
-
-for (let i = 0; i < 20000; i++) {
-  const startTime = faker.date.recent({ days: 30 }); // Within last 30 days
-  appointments.push({
-    renter_id: faker.string.uuid(), // Fake User ID
-    apartment_id: faker.number.int({ min: 1, max: 5000 }), // Links to apartments
-    status: faker.helpers.arrayElement(['Pendiente', 'Confirmado']), // Matches your Appointment.status
-    start_time: startTime.toISOString(), // e.g., "2025-04-10T08:15:22.123Z"
-    end_time: new Date(startTime.getTime() + 30 * 60 * 1000).toISOString(), // 30min later
-    owner_id: faker.string.uuid(), // Fake User ID
-  });
-}
-
-fs.writeFileSync('data/appointments.json', JSON.stringify(appointments, null, 2));
-console.log('Generated 20,000 appointments');
+fs.writeFileSync('apartments.json', JSON.stringify(apartments, null, 2));
+fs.writeFileSync('appointments.json', JSON.stringify(appointments, null, 2));
+console.log(`Generated ${APARTMENTS_COUNT} apartments across ${cities.length} cities and ${APPOINTMENTS_COUNT} appointments`);
